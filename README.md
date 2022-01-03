@@ -1,5 +1,5 @@
-# Analysis of Conservative Effects (ACE)
-Research repository for methods of analyzing difference in means of 2-sample data.
+# Analysis of Conservative Effects (ACES)
+Research repository for new method of analyzing difference in means of 2-sample data. Code will be added as the research papers are pre-published.
 
 This repository contains code necessary to compute the following statistics
 1. Most difference in means (&delta;<sub>M</sub>)
