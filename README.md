@@ -2,10 +2,10 @@
 Research repository for new method of analyzing difference in means of 2-sample data. Code will be added as the research papers are pre-published.
 
 This repository contains code necessary to compute the following statistics
-1. Most difference in means (&delta;<sub>M</sub>)
-2. Relative most difference in means (r&delta;<sub>M</sub>)
-3. Least difference in means (&delta;<sub>L</sub>)
-4. Relative Least difference in means (r&delta;<sub>L</sub>)
+1. Most difference in means (&delta;<sub>M</sub>): calculated with mdm_credint() in R/aces.R, with relative=FALSE
+2. Relative most difference in means (r&delta;<sub>M</sub>): calculated with mdm_credint() in R/aces.R, with relative=TRUE
+3. Least difference in means (&delta;<sub>L</sub>): calculated with ldm_credint() in R/aces.R, with relative=FALSE
+4. Relative Least difference in means (r&delta;<sub>L</sub>): calculated with ldm_credint() in R/aces.R, with relative=TRUE
 
 Note: run "set_wd_here.R" in base directoy first to set working directory to the base folder for the repository. All code assumes that is the location for the workign directory.
 
