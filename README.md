@@ -1,6 +1,6 @@
-# Analysis of Conservative Effects (ACE)
-The official repository for (https://arxiv.org/abs/2201.01239) is found at a different repository: https://github.com/bac7wj/ACES <p>
-This repository is under continuous development for research. <p>
+# Analysis of Conservative Effect Size (ACES)
+The official repository for (https://arxiv.org/abs/2201.01239)<p>
+This repository is under continuous development for research. <p> <p>
 This repository contains code necessary to compute the following statistics <p>
 1. Most difference in means (&delta;<sub>M</sub>): calculated with mdm_credint() in R/aces.R, with relative=FALSE
 2. Relative most difference in means (r&delta;<sub>M</sub>): calculated with mdm_credint() in R/aces.R, with relative=TRUE
