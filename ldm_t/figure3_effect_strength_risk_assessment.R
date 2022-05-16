@@ -12,7 +12,7 @@ p_load(gplots)
 # Figure parameters
 #-------------------------------------------------------------------------------
 fig_num = "2"
-base_dir = "mdm_t"
+base_dir = "ldm_t"
 sum_fig_path = paste(getwd(),'/', base_dir,"/figure/F",fig_num, sep="")
 dir.create(sum_fig_path, showWarnings = FALSE, recursive = TRUE)
 
@@ -20,6 +20,8 @@ data_path <- paste(getwd(),'/', base_dir,"/temp", sep="")
 dir.create(data_path, showWarnings = FALSE, recursive = TRUE)
 
 
+fig_height_inch <- 2.5
+fig_width_inch <- 6.25
 
 # Heatmap formatting
 #------------------------------------------------------------------------
@@ -44,50 +46,49 @@ add_underline <- function(cells,lwd){
 
 
 
+# Input arguments
+n_samples = 1E3
+use_pseudo_samples = TRUE
+
 # Export summary stats for unscaled data
 #-------------------------------------------------------------------------------
 
-if (!file.exists(file.path(data_path, "df_unscaled_null.RDS"))) {
-  print("SFig 8: unscaled agreement contest null")
-  source(file.path(base_dir, "sfigure6-7_unscaled_risk_assessment_null.R"))
-  } else {load(file = file.path(data_path, "df_unscaled_null.RDS"))}
+if (!file.exists(file.path(data_path, "df_unscaled_pos.RDS"))) {
+  print("SFig 9: unscaled agreement contest pos")
+  source(file.path(base_dir, "sfigure9_pos_unscaled_risk_assessment_crit.R"))
+} else {load(file = file.path(data_path, "df_unscaled_pos.RDS"))}
 
-if (!file.exists(file.path(data_path, "df_unscaled_crit.RDS"))) {
-  print("SFig 9: unscaled agreement contest crit")
-  source(file.path(base_dir, "sfigure8-9_unscaled_risk_assessment_critical.R"))
-  } else {load(file = file.path(data_path, "df_unscaled_crit.RDS"))}
+if (!file.exists(file.path(data_path, "df_unscaled_neg.RDS"))) {
+  print("SFig 10: unscaled agreement contest neg")
+  source(file.path(base_dir, "sfigure10_neg_unscaled_risk_assessment_crit.R"))
+} else {load(file = file.path(data_path, "df_unscaled_neg.RDS"))}
 
 
 # Heatmap of unscaled data
 #-------------------------------------------------------------------------------
-dfs_unscaled <- c(df_unscaled_null,df_unscaled_crit)
-scale_norm_ind = rep(c(1,3,3,7,1,3,3,7),2)
+dfs_unscaled <- c(df_unscaled_pos,df_unscaled_neg)
 
 # Extract means for each group and subtract from 0.5 (random)
 scale_means_from_0.5 <- sapply(dfs_unscaled, function(x) x$df_plotted$mean) - 0.5
 scale_scores <- sweep(scale_means_from_0.5, 2, abs(apply(scale_means_from_0.5,2,min)), FUN = '/')
 
-
 # Export csv
-rownames(scale_scores) <- attr(df_unscaled_null[[1]]$df_es, "varnames")
+rownames(scale_scores) <- attr(dfs_unscaled[[1]]$df_es, "varnames")
 # Identity which cells are statistically significant from random
 scale_scores_sig <- !sapply(dfs_unscaled, function(x) x$df_plotted$is_mean_0.5) 
-# Identity which cells are used for normalization
-scale_score_norm <- sapply(scale_norm_ind, function(ind,len) 
-  ifelse(1:len == ind, TRUE,FALSE), length(attr(df_unscaled_null[[1]]$df_es, "varnames")))
 
 # Zero color to white for fields that are not statistically significant
 zeroed_scale_scores <- scale_scores
 zeroed_scale_scores[!scale_scores_sig] <- 0
-png(paste(sum_fig_path, "/F", fig_num, "_disrisk_assessment raw scale.png",sep=""),    
-    width = 5.63*300, height = 2.5*300, res = 300, pointsize = 8)  
+png(paste(sum_fig_path, "/F", fig_num, "_risk_assessment_unscaled_agreement.png",sep=""),    
+    width = fig_width_inch*300, height = fig_height_inch*300, res = 300, pointsize = 8)  
 heatmap.2(zeroed_scale_scores, trace = "none", dendrogram = "none", key = FALSE,
-          add.expr = {add_underline(scale_scores_sig,1.5);}, # makeRects(scale_score_norm,1.5)}, 
+          add.expr = {add_underline(scale_scores_sig,1.5);}, 
           col = my_palette,  Rowv = F, Colv = F, sepwidth = c(0,0),
-          labRow =  sapply(attr(df_unscaled_null[[1]]$df_es, "varnames"),
+          labRow =  sapply(attr(dfs_unscaled[[1]]$df_es, "varnames"),
                            function(x) parse(text=x)),labCol = "",
           cellnote = matrix(sapply(scale_scores,function(x) sprintf("%0.2+f",x)),
-                          nrow = dim(scale_scores)[1]),
+                            nrow = dim(scale_scores)[1]),
           breaks = col_breaks,
           notecol ="black", notecex = 1, lwid = c(0.001,5),lhei = c(0.001,5),margins = c(0,0))
 dev.off()
@@ -99,15 +100,15 @@ dev.off()
 # Export summary stats for relative scale data
 #-------------------------------------------------------------------------------
 
-if (!file.exists(file.path(data_path, "df_relative_null.RDS"))) {
-  print("SFig 10: relative agreement contest null")
-  source(file.path(base_dir, "sfigure10-11_relative_risk_assessment_null.R"))
-  } else {load(file = file.path(data_path, "df_relative_null.RDS"))}
+if (!file.exists(file.path(data_path, "df_relative_pos.RDS"))) {
+  print("SFig 10: relative agreement contest pos")
+  source(file.path(base_dir, "sfigure11_pos_rel_risk_assessment_crit.R"))
+} else {load(file = file.path(data_path, "df_relative_pos.RDS"))}
 
-if (!file.exists(file.path(data_path, "df_relative_crit.RDS"))) {
-  print("SFig 11: relative agreement contest crit")
-  source(file.path(base_dir, "sfigure12-13_relative_risk_assessment_crit.R"))
-  } else {load(file = file.path(data_path, "df_relative_crit.RDS"))}
+if (!file.exists(file.path(data_path, "df_relative_neg.RDS"))) {
+  print("SFig 11: relative agreement contest neg")
+  source(file.path(base_dir, "sfigure12_neg_rel_risk_assessment_crit.R"))
+} else {load(file = file.path(data_path, "df_relative_neg.RDS"))}
 
 fig_num = "2" 
 
@@ -115,35 +116,27 @@ fig_num = "2"
 # Heatmap of relative data
 #-------------------------------------------------------------------------------
 # Export summary stats for relative scale data
-dfs_relative <- c(df_relative_null,df_relative_crit)
-relative_norm_ind = rep(c(2,4,4,7,2,4,4,7),2)
+dfs_relative <- c(df_relative_pos,df_relative_neg)
 
 # Extract means for each group and subtract from 0.5 (random)
 relative_means_from_0.5 <- sapply(dfs_relative, function(x) x$df_plotted$mean) - 0.5
 # scale_means_from_0.5 <- sapply(dfs_unscaled, function(x) x$df_plotted$mean) - 0.5
 rscale_scores <- sweep(relative_means_from_0.5, 2, abs(apply(relative_means_from_0.5,2,min)), FUN = '/')
 
-
-
-# rscale_means_from_0.5 <- 0.5 - sapply(dfs_rscale, function(x) get(x)$df_plotted$mean)
-# rscale_scores <- -t(t(relative_means_from_0.5)/
-#                      relative_means_from_0.5[cbind(relative_norm_ind,seq_along(relative_norm_ind))])
 # Export csv
-rownames(rscale_scores) <- attr(df_relative_null[[1]]$df_es,"varnames")
+rownames(rscale_scores) <- attr(dfs_relative[[1]]$df_es,"varnames")
 # Get statistical significance
 rscale_scores_sig <- !sapply(dfs_relative, function(x) x$df_plotted$is_mean_0.5) 
-rscale_score_norm <- sapply(relative_norm_ind, function(ind,len) 
-  ifelse(1:len == ind, TRUE,FALSE), length(attr(df_relative_null[[1]]$df_es,"varnames_pretty")))
 
 # Zero color to white for fields that are not statistically significant
 zeroed_rscale_scores <- rscale_scores
 zeroed_rscale_scores[!rscale_scores_sig] <- 0
-png(paste(sum_fig_path,"/F", fig_num, "_disrisk_assessment relative scale.png",sep=""),    
-    width = 5.63*300, height = 2.5*300, res = 300, pointsize = 8)  
+png(paste(sum_fig_path,"/F", fig_num, "_risk_assessment_relative_agreement.png",sep=""),    
+    width = fig_width_inch*300, height = fig_height_inch*300, res = 300, pointsize = 8)  
 heatmap.2(zeroed_rscale_scores, trace = "none", dendrogram = "none", key = FALSE,
-          add.expr = {add_underline(rscale_scores_sig,1.5);}, # makeRects(rscale_score_norm,1.5)}, 
+          add.expr = {add_underline(rscale_scores_sig,1.5);},
           col = my_palette,  Rowv=F, Colv=F, sepwidth=c(0,0),
-          labRow =  sapply(attr(df_relative_null[[1]]$df_es,"varnames_pretty"),
+          labRow =  sapply(attr(dfs_relative[[1]]$df_es,"varnames_pretty"),
                            function(x) parse(text=x)),labCol = "",
           cellnote=matrix(sapply(rscale_scores,function(x) sprintf("%0.2+f",x)),
                           nrow = dim(rscale_scores)[1]),

@@ -1,16 +1,16 @@
 
 
-#' Agreement Contests
-#' To probe how effective candidate statistics are at quantifying agreement 
+#' Strength Contests
+#' To probe how effective candidate statistics are at quantifying null or effect strength 
 #' between study group means. A series of population parameter sets for two 
 #' experiments (Exp 1 and 2) with two groups (control group A & experiment 
-#' group B) are generated, each a row in the dataframe of generated experiment 
+#' group B) are generated, each a row in the data frame of generated experiment 
 #' data. Repeated samples are drawn from the population parameter sets and candidate
 #' statistics are quantified and used to determine whether exp 1 or exp 2 has 
-#' higher agreement.
-#' All three agreement parameters (mu_DM, sigma_D, df_D) can be varied as 
-#' independent variables to determine how effectize candidate statistics are in
-#' quatnifying agreement.
+#' higher strength
+#' All 6 strength parameters (mu_DM, sigma_D, rmu_dm, rsigma_dm, df_D) can be varied as 
+#' independent variables to determine how effective candidate statistics are in
+#' quantifying strength
 
 
 
@@ -37,14 +37,14 @@ source("R/aces.R")
 
 # Parse all functions in file for parallel processing using user functions
 row_stats_toolbox_fun <- parse_functions_source("R/row_stats_toolbox.R")
-mdm_functions <- parse_functions_source("R/aces.R")
+aces_functions <- parse_functions_source("R/aces.R")
 
 
 # Default distribution for population parameters for Exp 1 {a,b}, Exp 2 {a,b}
 generate_population_configs <- function(n_samples, n_sims, rand.seed,
                                     # Control group pop. parameters
                                     mus_1a, sigmas_1a, 
-                                    mus_2a, sigmas_2a,
+                                    mus_2a = NA, sigmas_2a = NA,
                                     # Experiment group pop. parameters
                                     mus_1b = NA, sigmas_1b = NA, 
                                     mus_2b = NA, sigmas_2b = NA,
@@ -55,10 +55,10 @@ generate_population_configs <- function(n_samples, n_sims, rand.seed,
                                     rmus_1d = NA, rsigmas_1d = NA,
                                     rmus_2d = NA, rsigmas_2d = NA,
                                     
-                                    n_1a, n_1b, n_2a, n_2b,
+                                    n_1a = NA, n_1b = NA, n_2a = NA, n_2b = NA,
                                     alpha_1 = 0.05, alpha_2 = 0.05,
                             
-                                    toggle_sign_rmu_d_hold_sigma = FALSE,
+                                    toggle_sign_rmu_d_hold_rsigma = FALSE,
                                     toggle_sign_mean_ab = FALSE,
                                     switch_group_ab = FALSE,
                                     switch_mu_ab_12 = FALSE,
@@ -71,7 +71,7 @@ generate_population_configs <- function(n_samples, n_sims, rand.seed,
                                     
                                     fig_name = "test.tiff",
                                     fig_path = "Figure/",
-                                    agreement = "ldt",
+                                    strength_type = "hnst",
                                     gt_colnames, is_plotted = TRUE,
                                     tol = 1e-15) {
   #' @description Generate simulated experiment data for two experiments with 
@@ -97,32 +97,43 @@ generate_population_configs <- function(n_samples, n_sims, rand.seed,
   #' @param mus_2ao mu offset between group a and b experiment 2
   #' @param sigmas_2ao sigma offset between group a and b experiment 2
   #' @param switch_group_ab flag to randomly switch group a and b assigments
-  #' @param toggle_sign_rmu_d_hold_sigma flag to randomly switch direction of change from a to b
+  #' @param toggle_sign_rmu_d_hold_rsigma flag to randomly switch direction of change from a to b
   #' @param switch_exp_12 flag to randomly switch experiment 1 and 2 assignments
   #' @param fig_name base string name of output figures saved to disk
   #' @param fig_path path to output figures saved to disk
   #' @param gt_colnames list of columns in df that serves as independent variables
   #'  and serve as groundtruth for determining whether exp 1 or 2 has higher 
-  #'  agreement for each pop. param set.
+  #'  strength for each pop. param set.
   #' @param is_plotted flag to export figures about pop. param sets to disk
   #' @return df dataframe with generated pop. param sets
 
-
+  save(list = ls(all.names = TRUE), file = "temp/generate_population_configs.RData",
+       envir = environment())
+  # load(file = "temp/generate_population_configs.RData")
+  
   # Expand any singleton pop param arguments replicate to number of simulations
   input_args <- formalArgs(generate_population_configs)
-  pargs <-grep("(^mus)|(^sigmas)|(^alpha)|(^n_\\d)", input_args, value=TRUE)
+  pargs <- grep("(^mus)|(^sigmas)|(^alpha)|(^n_\\d)", input_args, value=TRUE)
   # For any pop param not equal in length to n_sims, expand
   for (n in seq_along(pargs)) {
     if (length(get(pargs[n]))==1) assign(pargs[n], rep(get(pargs[n]),n_sims))
   }
 
   # Record some parameter values for simulations
-  set.seed(rand.seed + 1)
+  set.seed(rand.seed)
   
-  # browser();
+  # Check that group 1A specified fully
+  if (any(is.na(mus_1a) || is.na(sigmas_1a) || is.na(n_1a))) {
+    stop("Group 1A not specified, must include: mus_1a, sigma_1a, n_1a")}
+
+  # # Test if input configurations are only for experiment 1 (single experiment setup)
+  # is_single_exp = (is.na(mus_2a) && is.na(sigmas_2a) && is.na(n_2a) )
   
-  # If offset from A groups (ao) specified, calculate params for B and D
-  if (any(is.na(c(mus_1b,mus_2b))) & any(is.na(c(rmus_1d,rmus_2d)))) {
+  # If have AO values, fill in B and D
+  if ( all(!is.na(mus_1ao) && !is.na(mus_2ao) && !is.na(sigmas_1ao) && !is.na(sigmas_2ao))) 
+    {
+    # Specified:  mus_xa, sigma_xa, mus_xao, sigma_xao
+    # Calculated: mus_xb, sigma_xb, mus_xd, sigma_xd 
     df_init <- 
       pop_configs_from_aoffset( n_samples = n_samples, n_sims= n_sims,
                                mus_1a = mus_1a, sigmas_1a = sigmas_1a,  
@@ -133,7 +144,11 @@ generate_population_configs <- function(n_samples, n_sims, rand.seed,
                                alpha_1 = alpha_1, alpha_2 = alpha_2) 
     
     # If relative offset groups specified, calculate params for B and D
-  } else if (any(is.na(c(mus_1b,mus_2b))) & any(is.na(c(mus_1ao, mus_2ao)))) {
+  } else if ( all(!is.na(rmus_1d) && !is.na(rmus_2d) && !is.na(rsigmas_1d) && !is.na(rsigmas_2d)))
+   {
+    # Specified:  mus_xa, sigma_xa, rmus_xd, rsigma_xd
+    # Calculated: mus_xb, sigma_xb, mus_xd, sigma_xd 
+    
     df_init <- 
       pop_configs_from_rmu_sigma( n_samples = n_samples, n_sims= n_sims,
                                mus_1a = mus_1a, sigmas_1a = sigmas_1a,  
@@ -143,8 +158,11 @@ generate_population_configs <- function(n_samples, n_sims, rand.seed,
                                n_1a = n_1a, n_2a = n_2a, n_1b = n_1b, n_2b = n_2b, 
                                alpha_1 = alpha_1, alpha_2 = alpha_2) 
     
-    # If group b specified, calculate params for D
+    
   } else {
+    # Specified: mus_xa, sigma_xa, mus_xb, sigma_x_b
+    # Calculated: mus_xd, sigma_xd
+    # Single experiments (only experiment 1) are processed here
     df_init   <- 
       pop_configs_from_ab( n_samples = n_samples, n_sims = n_sims, 
                           mus_1a = mus_1a, sigmas_1a = sigmas_1a,  mus_2a = mus_2a, sigmas_2a = sigmas_2a,
@@ -152,8 +170,9 @@ generate_population_configs <- function(n_samples, n_sims, rand.seed,
                           n_1a = n_1a, n_2a = n_2a, n_1b = n_1b, n_2b = n_2b, 
                           alpha_1 = alpha_1, alpha_2 = alpha_2) 
   }
+  
   # Switch params between groups/experiments if specified with flags
-  df <- pop_configs_switches(df = df_init, toggle_sign_rmu_d_hold_sigma = toggle_sign_rmu_d_hold_sigma, 
+  df <- pop_configs_switches(df = df_init, toggle_sign_rmu_d_hold_rsigma = toggle_sign_rmu_d_hold_rsigma, 
                             toggle_sign_mean_ab = toggle_sign_mean_ab, 
                             switch_group_ab = switch_group_ab,
                             switch_mu_ab_12 = switch_mu_ab_12, 
@@ -165,84 +184,86 @@ generate_population_configs <- function(n_samples, n_sims, rand.seed,
                             switch_n_12 = switch_n_12)
   
   # Dataframes that store direction of inequality for each parameter
-  # hat: Exp 1 higher agreement than exp 2
-  df_ldt = data.frame(is_mud_1ldt2 = 0)
-  # hdt: Exp 2 higher disagreement than exp 2
-  df_lat = data.frame(is_mud_1lat2 = 0)
+  # hat: Exp 1 higher null strength than exp 2
+  df_hnst = data.frame(is_mudm_1hnst2 = 0)
+  # hdt: Exp 2 higher effect strength than exp 2
+  df_hest = data.frame(is_mudm_1hest2 = 0)
   
   # Mean of the difference
+  
+  # Mean and std of difference in means (taken from mean of D since we had the option
+  # to invert the sign for D earlier in code)
+  df$mu_1dm <- df$mu_1d
+  df$mu_2dm <- df$mu_2d
+  df$is_mudm_1hnst2 <-  abs(df$mu_1dm) < abs(df$mu_2dm)
+  df_hnst$is_mudm_1hnst2 <- "lt"
+  df$is_mudm_1hest2 <-  !df$is_mudm_1hnst2
+  df_hest$is_mudm_1hest2 <- "gt"
+  
   # df$mu_1d <- df$mu_1b - df$mu_1a
   # df$mu_2d <- df$mu_2b - df$mu_2a
   # Is: Exp2 mu[d] > Exp1 mu[d]
-  df$is_mud_1ldt2 <-  abs(df$mu_1d) < abs(df$mu_2d)
-  df_ldt$is_mud_1ldt2 <- "lt"
-  df$is_mud_1lat2 <- !df$is_mud_1ldt2
-  df_lat$is_mud_1lat2 <- "gt"
+  # df$is_mudm_1hnst2 <-  abs(df$mu_1d) < abs(df$mu_2d)
+  # df_hnst$is_mudm_1hnst2 <- "lt"
+  # df$is_mudm_1hest2 <- !df$is_mudm_1hnst2
+  # df_hest$is_mudm_1hest2 <- "gt"
   
   # STD of the difference
   df$sigma_1d <- sqrt(df$sigma_1a^2 + df$sigma_1b^2)
   df$sigma_2d <- sqrt(df$sigma_2a^2 + df$sigma_2b^2) 
-  df$is_sigmad_1ldt2 <-  df$sigma_1d < df$sigma_2d
-  df_ldt$is_sigmad_1ldt2 <- "lt"
-  df$is_sigmad_1lat2 <- df$is_sigmad_1ldt2
-  df_lat$is_sigmad_1lat2 <- "lt"
+  df$is_sigmad_1hnst2 <-  df$sigma_1d < df$sigma_2d
+  df_hnst$is_sigmad_1hnst2 <- "lt"
+  df$is_sigmad_1hest2 <- df$is_sigmad_1hnst2
+  df_hest$is_sigmad_1hest2 <- "lt"
   
   # Degrees of freedom of the difference
   df$df_1d <- df$n_1a + df$n_1b - 2
   df$df_2d <- df$n_2a + df$n_2b - 2
-  df$is_dfd_1ldt2 <- df$df_1d > df$df_2d
-  df_ldt$is_dfd_1ldt2 <- "gt"
-  df$is_dfd_1lat2 <- df$is_dfd_1ldt2
-  df_lat$is_dfd_1lat2 <- "gt"
+  df$is_dfd_1hnst2 <- df$df_1d > df$df_2d
+  df_hnst$is_dfd_1hnst2 <- "gt"
+  df$is_dfd_1hest2 <- df$is_dfd_1hnst2
+  df_hest$is_dfd_1hest2 <- "gt"
   
   # Degrees of freedom of the difference in means
-  df$is_dfdm_1ldt2 <- df$df_1d > df$df_2d
-  df_ldt$is_dfdm_1ldt2 <- "gt"
-  df$is_dfdm_1lat2 <- df$is_dfdm_1ldt2
-  df_lat$is_dfdm_1lat2 <- "gt"
+  df$is_dfdm_1hnst2 <- df$df_1d > df$df_2d
+  df_hnst$is_dfdm_1hnst2 <- "gt"
+  df$is_dfdm_1hest2 <- df$is_dfdm_1hnst2
+  df_hest$is_dfdm_1hest2 <- "gt"
   
   # Pooled standard deviation
   df$sigma_1pool <- sqrt( ( (df$n_1a-1)*df$sigma_1a^2 + (df$n_1b-1)*df$sigma_1b^2) /
                             (df$n_1a-1 + df$n_1b -1 )  )
   df$sigma_2pool <- sqrt( ( (df$n_2a-1)*df$sigma_2a^2 + (df$n_2b-1)*df$sigma_2b^2) /
                             (df$n_2a-1 + df$n_2b-1 ))
-  df$is_sigmapool_1ldt2 <- df$sigma_1pool < df$sigma_2pool
-  df_ldt$is_sigmapool_1ldt2 <- "lt"
-  df$is_sigmapool_1lat2 <-  df$is_sigmapool_1ldt2
-  df_lat$is_sigmapool_1lat2 <- "lt"
+  df$is_sigmapool_1hnst2 <- df$sigma_1pool < df$sigma_2pool
+  df_hnst$is_sigmapool_1hnst2 <- "lt"
+  df$is_sigmapool_1hest2 <-  df$is_sigmapool_1hnst2
+  df_hest$is_sigmapool_1hest2 <- "lt"
   
-  # Mean and std of difference in means (taken from mean of D since we had the option
-  # to invert the sign for D earlier in code)
-  df$mu_1dm <- df$mu_1d
-  df$mu_2dm <- df$mu_2d
-  df$is_mudm_1ldt2 <-  abs(df$mu_1dm) < abs(df$mu_2dm)
-  df_ldt$is_mudm_1ldt2 <- "lt"
-  df$is_mudm_1lat2 <-  !df$is_mudm_1ldt2
-  df_lat$is_mudm_1lat2 <- "gt"
   
   # STD of the difference in means
   df$sigma_1dm <- sqrt(df$sigma_1a^2/df$n_1a + df$sigma_1b^2/df$n_1b)
   df$sigma_2dm <- sqrt(df$sigma_2a^2/df$n_2a + df$sigma_2b^2/df$n_2b)
-  df$is_sigmadm_1ldt2 <-  df$sigma_1dm < df$sigma_2dm
-  df_ldt$is_sigmadm_1ldt2 <- "lt"
-  df$is_sigmadm_1lat2 <- df$is_sigmadm_1ldt2
-  df_lat$is_sigmadm_1lat2 <- "lt"
+  df$is_sigmadm_1hnst2 <-  df$sigma_1dm < df$sigma_2dm
+  df_hnst$is_sigmadm_1hnst2 <- "lt"
+  df$is_sigmadm_1hest2 <- df$is_sigmadm_1hnst2
+  df_hest$is_sigmadm_1hest2 <- "lt"
   
   # ALPHA: significance level
-  # Higher significance level, higher agreement
-  df$is_alpha_1ldt2     <- df$alpha_1 > df$alpha_2
-  df_ldt$is_alpha_1ldt2 <- "gt"
-  # Higher significance level, higher disagreement
-  df$is_alpha_1lat2     <- df$alpha_1 > df$alpha_2
-  df_lat$is_alpha_1ldt2 <- "gt" 
+  # Higher significance level, higher null strength
+  df$is_alpha_1hnst2     <- df$alpha_1 > df$alpha_2
+  df_hnst$is_alpha_1hnst2 <- "gt"
+  # Higher significance level, higher effect strength
+  df$is_alpha_1hest2     <- df$alpha_1 > df$alpha_2
+  df_hest$is_alpha_1hest2 <- "gt" 
   
   # Critical t value of difference in means
   df$tstat_1dm <- df$mu_1dm / df$sigma_1dm
   df$tstat_2dm <- df$mu_2dm / df$sigma_2dm
-  df$is_tstatdm_1ldt2 <- df$tstat_1dm < df$tstat_2dm
-  df_ldt$is_tstatdm_1ldt2 <- "lt"
-  df$is_tstatdm_1lat2 <- df$tstat_1dm > df$tstat_2dm
-  df_lat$is_tstatdm_1lat2 <- "gt"
+  df$is_tstatdm_1hnst2 <- df$tstat_1dm < df$tstat_2dm
+  df_hnst$is_tstatdm_1hnst2 <- "lt"
+  df$is_tstatdm_1hest2 <- df$tstat_1dm > df$tstat_2dm
+  df_hest$is_tstatdm_1hest2 <- "gt"
   # Critical t value for population parameter set
   df$tcrit_1dm <- qt(1-df$alpha_1, df$n_1a + df$n_1b - 2, lower.tail = TRUE)
   df$tcrit_2dm <- qt(1-df$alpha_2, df$n_2a + df$n_2b - 2, lower.tail = TRUE)
@@ -259,10 +280,10 @@ generate_population_configs <- function(n_samples, n_sims, rand.seed,
   # Statistics of difference of means distribution 
   df$rmu_1dm <- df$mu_1dm / df$mu_1a
   df$rmu_2dm <- df$mu_2dm / df$mu_2a
-  df$is_rmudm_1ldt2 <-  abs(df$rmu_1dm) - abs(df$rmu_2dm) + tol < 0
-  df_ldt$is_rmudm_1ldt2 <- "lt"
-  df$is_rmudm_1lat2 <-  abs(df$rmu_1dm) - abs(df$rmu_2dm) - tol > 0
-  df_lat$is_rmudm_1lat2 <- "gt"
+  df$is_rmudm_1hnst2 <-  abs(df$rmu_1dm) - abs(df$rmu_2dm) + tol < 0
+  df_hnst$is_rmudm_1hnst2 <- "lt"
+  df$is_rmudm_1hest2 <-  abs(df$rmu_1dm) - abs(df$rmu_2dm) - tol > 0
+  df_hest$is_rmudm_1hest2 <- "gt"
   
   # Relative sigma of difference
   # browser()
@@ -270,26 +291,26 @@ generate_population_configs <- function(n_samples, n_sims, rand.seed,
   df$rsigma_2d <- df$sigma_2d / abs(df$mu_2a)
   # df$rsigma_1d <- df$sigma_1d / abs(df$mu_1a + df$mu_1d/2)
   # df$rsigma_2d <- df$sigma_2d / abs(df$mu_2a + df$mu_2d/2)
-  df$is_rsigmad_1ldt2 <-  df$rsigma_1d - df$rsigma_2d + tol < 0
-  df_ldt$is_rsigmad_1ldt2 <- "lt"
-  df$is_rsigmad_1lat2 <-  df$rsigma_1d - df$rsigma_2d + tol < 0
-  df_lat$is_rsigmad_1lat2 <- "lt"
+  df$is_rsigmad_1hnst2 <-  df$rsigma_1d - df$rsigma_2d + tol < 0
+  df_hnst$is_rsigmad_1hnst2 <- "lt"
+  df$is_rsigmad_1hest2 <-  df$rsigma_1d - df$rsigma_2d + tol < 0
+  df_hest$is_rsigmad_1hest2 <- "lt"
   
   # Relative Pooled Sigma
   df$rsigma_1pool <- df$sigma_1pool / abs(df$mu_1a + df$mu_1d/2)
   df$rsigma_2pool <- df$sigma_2pool / abs(df$mu_2a + df$mu_2d/2)
-  df$is_rsigmapool_1ldt2 <-  df$rsigma_1pool - df$rsigma_2pool + tol < 0
-  df_ldt$is_rsigmapool_1ldt2 <- "lt"
-  df$is_rsigmapool_1lat2 <-  df$rsigma_1pool - df$rsigma_2pool + tol < 0
-  df_lat$is_rsigmapool_1lat2 <- "lt"
+  df$is_rsigmapool_1hnst2 <-  df$rsigma_1pool - df$rsigma_2pool + tol < 0
+  df_hnst$is_rsigmapool_1hnst2 <- "lt"
+  df$is_rsigmapool_1hest2 <-  df$rsigma_1pool - df$rsigma_2pool + tol < 0
+  df_hest$is_rsigmapool_1hest2 <- "lt"
   
   # sigma of the difference of means distribution
   df$rsigma_1dm <- df$sigma_1dm / abs(df$mu_1a)
   df$rsigma_2dm <- df$sigma_2dm / abs(df$mu_2a)
-  df$is_rsigmadm_1ldt2 <- df$rsigma_1dm - df$rsigma_2dm + tol < 0
-  df_ldt$is_rsigmadm_1ldt2 <- "lt"
-  df$is_rsigmadm_1lat2 <- df$rsigma_1dm - df$rsigma_2dm + tol < 0
-  df_lat$is_rsigmadm_1lat2 <- "lt"
+  df$is_rsigmadm_1hnst2 <- df$rsigma_1dm - df$rsigma_2dm + tol < 0
+  df_hnst$is_rsigmadm_1hnst2 <- "lt"
+  df$is_rsigmadm_1hest2 <- df$rsigma_1dm - df$rsigma_2dm + tol < 0
+  df_hest$is_rsigmadm_1hest2 <- "lt"
   
   # Population parameter differences
   df$mean_mud_2m1 <- df$mu_2dm - df$mu_1dm
@@ -297,15 +318,24 @@ generate_population_configs <- function(n_samples, n_sims, rand.seed,
   df$mean_sigmadm_2m1 <- df$sigma_2dm - df$sigma_1dm
   df$mean_rsigmadm_2m1 <- df$sigma_2dm/df$mu_2a - df$sigma_1dm/df$mu_1a
   
-  attr(df,"df_ldt") <- df_ldt
-  attr(df,"df_lat") <- df_lat
+  # Caclulate Power
+  # df$power_1 <- pwr.t2n.test(n1 = df$n_1a, n2 = df$n_1a, d = df$mu_1d/df$sigma_1dm, 
+  #                            sig.level = df$alpha_1, power = NULL,
+  #                            alternative = "two.sided")$power
+  # df$power_2 <- pwr.t2n.test(n1 = df$n_2a, n2 = df$n_2a, d = df$mu_2d/df$sigma_2dm, 
+  #                            sig.level = df$alpha_2, power = NULL,
+  #                            alternative = "two.sided")$power
+  
+  attr(df,"df_hnst") <- df_hnst
+  attr(df,"df_hest") <- df_hest
   
   # browser();
   # Plot generated population parameters
   if (is_plotted){
     plot_population_configs(df, fig_name = fig_name, fig_path = fig_path, 
-                           gt_colnames = gt_colnames, agreement = agreement)
+                           gt_colnames = gt_colnames, strength_type = strength_type)
   } else {
+    # browser();
     
     # Plot values of of mu, rmu, sigma, rsigma of d and b over simulations, and df
     df_runs = tibble(Series = rep(seq(1,dim(df)[1],1),6),
@@ -315,7 +345,7 @@ generate_population_configs <- function(n_samples, n_sims, rand.seed,
                      Value = c(df$mu_1dm, df$sigma_1d, df$rmu_1dm, df$rsigma_1d, df$df_1d,df$alpha_1)
     )
     df_runs$param <- factor(df_runs$param, levels = c("mu[DM]", "sigma[D]", "r*mu[DM]","r*sigma[D]","df[D]","alpha[DM]"))
-    # Plot facet of each agreement parameter over series
+    # Plot facet of each strength measure over series
     gg <- ggplot(data = df_runs, aes(x = Series, y = Value)) +
       geom_line() +
       facet_wrap(vars(param), nrow=3,ncol=2,scales="free_y",labeller=label_parsed) +
@@ -387,13 +417,17 @@ pop_configs_from_rmu_sigma <-
             rmus_1d, rsigmas_1d, rmus_2d, rsigmas_2d,
             n_1a, n_1b, n_2a, n_2b, alpha_1, alpha_2) {
     
+    save(list = ls(all.names = TRUE), file = "temp/pop_configs_from_rmu_sigma.RData",envir = environment())
+    # load(file = "temp/pop_configs_from_rmu_sigma.RData")
+    
     
     # Calculate mu and sigma d and b based on relative mus and sigmas
     mus_1d = rmus_1d * mus_1a;  mus_2d = rmus_2d * mus_2a; 
+    # Calculate mu for group b
     mus_1b =  mus_1d + mus_1a;  mus_2b =  mus_2d + mus_2a;
       
-    sigmas_1d = rsigmas_1d * (mus_1a + 1/2*mus_1d)
-    sigmas_2d = rsigmas_2d * (mus_2a + 1/2*mus_2d)
+    sigmas_1d = rsigmas_1d * mus_1a 
+    sigmas_2d = rsigmas_2d * mus_2a 
     
     sigmas_1b = sqrt(sigmas_1d^2 - sigmas_1a^2)
     sigmas_2b = sqrt(sigmas_2d^2 - sigmas_2a^2)
@@ -456,17 +490,17 @@ pop_configs_from_ab <- function( n_samples, n_sims,
 }
 
 
-pop_configs_switches <- function(df_init, toggle_sign_rmu_d_hold_sigma, toggle_sign_mean_ab, 
+pop_configs_switches <- function(df_init, toggle_sign_rmu_d_hold_rsigma, toggle_sign_mean_ab, 
                                 switch_group_ab, switch_mu_ab_12, switch_rmu_d_12_hold_rsigma,
                                 switch_mu_d_12, switch_sigma_ab_12, switch_rsigma_ab_12_hold_sigma_a,
                                 switch_alpha_12, switch_n_12) {
   #' @description Apply various switches/alterations to group assignment of 
-  #' pop. param sets at random. These alterations allow the agreement parameters 
+  #' pop. param sets at random. These alterations allow the strength measures 
   #' to be probed in an independent fashion by averaging out the effects of all 
-  #' other agreement parameters
+  #' other strength measures
   #' 
   #' @param df_init dataframe of population params
-  #' @param toggle_sign_rmu_d_hold_sigma flag to randomly switch the sign of the difference 
+  #' @param toggle_sign_rmu_d_hold_rsigma flag to randomly switch the sign of the difference 
   #' in means between A and B. So if A is larger than a by some amount, B now 
   #' becomes smaller than A by the same amount
   #' @param toggle_sign_mean_ab flag to randomly switch the sign of the means 
@@ -478,12 +512,6 @@ pop_configs_switches <- function(df_init, toggle_sign_rmu_d_hold_sigma, toggle_s
   #' @return df dataframe of pop param sets with switches applied 
   
   df <- df_init
-  # browser();
-  # hist(df$sigma_1d/(df$mu_1a + 0.5* df$mu_1d))
-  # hist(df$sigma_2d/(df$mu_2a + 0.5* df$mu_2d))
-  
-  # browser();
-  
   
   if (switch_rsigma_ab_12_hold_sigma_a) {
     # browser();
@@ -493,12 +521,12 @@ pop_configs_switches <- function(df_init, toggle_sign_rmu_d_hold_sigma, toggle_s
     prev_sigma_1a <- df$sigma_1a;   
     prev_sigma_2a <- df$sigma_2a;   
     
-    prev_rsigma_1d <- df$sigma_1d/(0.5*(df$mu_1a + df$mu_1b));
-    prev_rsigma_2d <- df$sigma_2d/(0.5*(df$mu_2a + df$mu_2b));
+    prev_rsigma_1d <- df$sigma_1d/df$mu_1a;
+    prev_rsigma_2d <- df$sigma_2d/df$mu_2a;
     
     # Reassign sigma_d
-    new_sigma_1d <- prev_rsigma_1d * (0.5*(df$mu_2a + df$mu_2b))
-    new_sigma_2d <- prev_rsigma_2d * (0.5*(df$mu_1a + df$mu_1b))
+    new_sigma_1d <- prev_rsigma_1d * df$mu_2a
+    new_sigma_2d <- prev_rsigma_2d * df$mu_1a
     
     
     # Recalculate sigma_b from new rsigma
@@ -632,8 +660,8 @@ pop_configs_switches <- function(df_init, toggle_sign_rmu_d_hold_sigma, toggle_s
     orig_rmu_1d <- df$mu_1d/df$mu_1a; orig_rmu_2d <- df$mu_2d/df$mu_2a;  
    
     
-    orig_rsigma_1d <- sqrt(df$sigma_1a^2 + df$sigma_1b^2) / (df$mu_1a + 0.5* df$mu_1d)
-    orig_rsigma_2d <- sqrt(df$sigma_2a^2 + df$sigma_2b^2) / (df$mu_2a + 0.5* df$mu_2d)
+    orig_rsigma_1d <- sqrt(df$sigma_1a^2 + df$sigma_1b^2) / df$mu_1a
+    orig_rsigma_2d <- sqrt(df$sigma_2a^2 + df$sigma_2b^2) / df$mu_2a
     
 
     df$mu_1d[switch_boolean] = orig_rmu_2d[switch_boolean] * df$mu_1a[switch_boolean]
@@ -643,13 +671,13 @@ pop_configs_switches <- function(df_init, toggle_sign_rmu_d_hold_sigma, toggle_s
     df$mu_2b[switch_boolean] <- df$mu_2a[switch_boolean] + df$mu_2d[switch_boolean]
     
     # Hold rsigma_d constant by calculating sigma_1b
-    new_sigma_1d <- orig_rsigma_1d * (df$mu_1a + 0.5 * df$mu_1d)
-    new_sigma_2d <- orig_rsigma_2d * (df$mu_2a + 0.5 * df$mu_2d)
+    new_sigma_1d <- orig_rsigma_1d * df$mu_1a
+    new_sigma_2d <- orig_rsigma_2d * df$mu_2a
     new_sigma_1b <- sqrt(new_sigma_1d^2 - df$sigma_1a^2)
     new_sigma_2b <- sqrt(new_sigma_2d^2 - df$sigma_2a^2)
     
-    new_rsigma_1d <- sqrt(df$sigma_1a^2 + new_sigma_1b^2)/(df$mu_1a + 0.5 * df$mu_1d)
-    new_rsigma_2d <- sqrt(df$sigma_2a^2 + new_sigma_2b^2)/(df$mu_2a + 0.5 * df$mu_2d)
+    new_rsigma_1d <- sqrt(df$sigma_1a^2 + new_sigma_1b^2)/df$mu_1a
+    new_rsigma_2d <- sqrt(df$sigma_2a^2 + new_sigma_2b^2)/df$mu_2a
     
     # Change sigma_[1,2]b to that the rsigma is the same
     df$sigma_1b = new_sigma_1b
@@ -659,7 +687,7 @@ pop_configs_switches <- function(df_init, toggle_sign_rmu_d_hold_sigma, toggle_s
   } 
   
 
-  if (toggle_sign_rmu_d_hold_sigma) { 
+  if (toggle_sign_rmu_d_hold_rsigma) { 
     # Randomly switch sign of D for both experiments, recalculate B
     # Then recalculate sigma_b so that rsigma_d is the same as before
     # browser();
@@ -670,8 +698,8 @@ pop_configs_switches <- function(df_init, toggle_sign_rmu_d_hold_sigma, toggle_s
     orig_mu_1d <- df$mu_1d;  orig_mu_2d <- df$mu_2d;  
     orig_sigma_1b <- df$sigma_1b; orig_sigma_2b <- df$sigma_2b;
     
-    orig_rsigma_1d <- sqrt(df$sigma_1a^2 + df$sigma_1b^2) / (df$mu_1a + 0.5* orig_mu_1d)
-    orig_rsigma_2d <- sqrt(df$sigma_2a^2 + df$sigma_2b^2) / (df$mu_2a + 0.5* orig_mu_2d)
+    orig_rsigma_1d <- sqrt(df$sigma_1a^2 + df$sigma_1b^2) / (df$mu_1a)
+    orig_rsigma_2d <- sqrt(df$sigma_2a^2 + df$sigma_2b^2) / (df$mu_2a)
     
     # Switch sign of mu_d randomly
     df$mu_1d[swith_boolean] =  -1 * orig_mu_1d[swith_boolean]
@@ -698,21 +726,17 @@ pop_configs_switches <- function(df_init, toggle_sign_rmu_d_hold_sigma, toggle_s
     #
     
     # rsigma must stay equal, so sigma_b is adjusted
-    new_sigma_1d <- orig_rsigma_1d * (df$mu_1a + 0.5 * df$mu_1d)
-    new_sigma_2d <- orig_rsigma_2d * (df$mu_2a + 0.5 * df$mu_2d)
+    new_sigma_1d <- orig_rsigma_1d * df$mu_1a
+    new_sigma_2d <- orig_rsigma_2d * df$mu_2a
     new_sigma_1b <- sqrt(new_sigma_1d^2 - df$sigma_1a^2)
     new_sigma_2b <- sqrt(new_sigma_2d^2 - df$sigma_2a^2)
     
-    new_rsigma_1d <- sqrt(df$sigma_1a^2 + new_sigma_1b^2)/(df$mu_1a + 0.5 * df$mu_1d)
-    new_rsigma_2d <- sqrt(df$sigma_2a^2 + new_sigma_2b^2)/(df$mu_2a + 0.5 * df$mu_2d)
+    new_rsigma_1d <- sqrt(df$sigma_1a^2 + new_sigma_1b^2)/(df$mu_1a)
+    new_rsigma_2d <- sqrt(df$sigma_2a^2 + new_sigma_2b^2)/(df$mu_2a)
     
     # Change sigma_[1,2]b to that the rsigma is the same
     df$sigma_1b = new_sigma_1b
     df$sigma_2b = new_sigma_2b
-    
-    # browser()
-    # new_rsigma_1d <- sqrt(df$sigma_1a^2 + df$sigma_1b^2) / (df$mu_1a + 0.5 * df$mu_1d)
-    # new_rsigma_2d <- sqrt(df$sigma_2a^2 + df$sigma_2b^2) / (df$mu_2a + 0.5 * df$mu_2d)
     
   }
   
@@ -722,18 +746,18 @@ pop_configs_switches <- function(df_init, toggle_sign_rmu_d_hold_sigma, toggle_s
 }
 
 
-plot_population_configs <- function(df_init, gt_colnames,fig_name,fig_path, agreement){
+plot_population_configs <- function(df_init, gt_colnames,fig_name,fig_path, strength_type){
   #' @description plots characterizing selection of pop. params across simulations.
-  #' 1) Plot fraction of pop param sets with exp 1 higher dis/agreement than 
+  #' 1) Plot fraction of pop param sets with exp 1 higher strength than 
   #' experiment 2 according to each candidate statistic, and test for non random
-  #'  correlation between agreement parameters.
+  #'  correlation between strength parameters.
   #' 2) Plot histogram of mu[DM]/sigma[DM] to visualize whether selected pop. 
   #' params fall within null or critical region (threshold ~2.5 stds from mean).
   #'
   #' @param df_init initial dataframe of pop params, each row is a set
   #' @param gt_colnames list of columns in df that serves as independent variables
   #'  and serve as groundtruth for determining whether exp 1 or 2 has higher 
-  #'  agreement for each pop. param set.
+  #'  strength for each pop. param set.
   #' @param fig_name
   #' @param fig_path path to output figures saved to disk
   #' 
@@ -742,9 +766,9 @@ plot_population_configs <- function(df_init, gt_colnames,fig_name,fig_path, agre
   save(list = ls(all.names = TRUE), file = "temp/plot_population_configs.RData",envir = environment())
   # load(file = "temp/plot_population_configs.RData")
   
-  # Output csv of agreement of input parameters to each individual input parameter
+  # Output csv of strength of input parameters to each individual input parameter
   param_fields = paste(c("is_mudm_1","is_rmudm_1","is_sigmad_1", "is_rsigmad_1",
-                         "is_dfdm_1", "is_alpha_1"), agreement,"2",sep="")
+                         "is_dfdm_1", "is_alpha_1"), strength_type,"2",sep="")
 
 
   # bv_gt_colnames <- sapply(gt_colnames, function(x) any(x==param_fields))
@@ -797,13 +821,12 @@ plot_population_configs <- function(df_init, gt_colnames,fig_name,fig_path, agre
   }
   df_params$group <- factor(df_params$group, levels = c("mu", "rmu", "sigma", "rsigma", "df","alpha"))
   
-  upper_agreement = toupper(agreement)
   # Plot confidence interval of success rate for each parameter and their agreement
   gg <- ggplot(df_params, aes(x = group,  y = estimate)) +
     geom_hline(yintercept = 0.5, size=0.5, color="grey",linetype="dashed") +
     geom_linerange(aes(ymin = lci, ymax = uci), size = 0.5) +
     geom_point(size = 1.25, fill = "white", shape = 1) + 
-    ylab(bquote(Frac.~Exp[1]~.(upper_agreement)~Exp[2]~~~~~~~~~~~~phantom("."))) +
+    ylab(bquote(Frac.~Exp[1]~.(toupper(strength_type))~Exp[2]~~~~~~~~~~~~phantom("."))) +
     xlab("Groundtruth") +
     theme_classic(base_size = 8) +
     scale_y_continuous(labels = scales::number_format(accuracy = 0.1)) +
@@ -827,6 +850,7 @@ plot_population_configs <- function(df_init, gt_colnames,fig_name,fig_path, agre
   print(gg)
   save_plot(paste(fig_path, '/gt_',fig_name, ".tiff", sep = ""), gg, ncol = 1, nrow = 1, 
             base_height = 1.5, base_asp = 3, base_width = 2, dpi = 600)
+
 
   # Export csv file for agreement between each variable to others
   # Plot histogram of mu[D]/sigma[D] to demonstrate how far from zero D is
@@ -854,7 +878,7 @@ plot_population_configs <- function(df_init, gt_colnames,fig_name,fig_path, agre
     annotate("label",label=ifelse(ks_p_val$p.value>0.05, 
                                   sprintf('p = %.3f', ks_p_val$p.value),
                                   sprintf('p = %.2e', ks_p_val$p.value))
-               , x=0, y=1.07*ymax, 
+               , x=mean(range(df$t_ratio)), y=1.07*ymax, 
              size=2, fill = "white",label.size = NA)
   # print(p)
   save_plot(paste(fig_path, '/predicted_t-ratio_',fig_name, sep = ""), p, ncol = 1, nrow = 1, 
@@ -865,9 +889,10 @@ plot_population_configs <- function(df_init, gt_colnames,fig_name,fig_path, agre
 
 quantify_population_configs <- function(df_in, overwrite = TRUE,
                                 out_path = "temp/", data_file_name,
-                                rand.seed = 0, include_bf = TRUE, 
+                                rand.seed = 0, 
                                 parallel_sims = TRUE,  stat_exclude_list = NULL,
-                                agreement = "ldt") {
+                                strength_type = "hnst", delta, is_delta_relative = FALSE,
+                                use_pseudo_samples = use_pseudo_samples) {
   #' @description Given a data frame of pop. params and input data for each 
   #' experiment group, quantify mean values and comparison error of various 
   #' candidate statistics over repeated samples.
@@ -876,17 +901,16 @@ quantify_population_configs <- function(df_in, overwrite = TRUE,
   #' @param out_path path to export data file to disk storing results
   #' @param data_file_name filename of exported datafile storing results
   #' @param rand.seed seed for random number generation
-  #' @param include_bf flag to include bayes factor in calculation (extremely slow)
   #' @param parallel_sims flag to parallelize simulation across CPU cores (recommended)
   #' 
   #' @return df dataframe with pop params and comparison error rates of each candidate statistics.
-
+  
   # Initialize output data frame
   n_sims = dim(df_in)[1]
-  df <- df_in
+  # df <- df_in
   
-  # save(list = ls(all.names = TRUE), file = "temp/quantify_population_configs.RData",envir = environment())
-  # # load(file = "temp/quantify_population_configs.RData")
+  save(list = ls(all.names = TRUE), file = "temp/quantify_population_configs.RData",envir = environment())
+  # load(file = "temp/quantify_population_configs.RData")
 
   
   # Only perform simulations if results not saved to disk
@@ -898,14 +922,15 @@ quantify_population_configs <- function(df_in, overwrite = TRUE,
       registerDoParallel(cl)
       
       df <- foreach(n = 1:n_sims, .combine = rbind, .packages = 
-                      c("BayesFactor","TOSTER"),
-                .export = c(row_stats_toolbox_fun, mdm_functions,
+                      c("BayesFactor","TOSTER", "sgpv"),
+                .export = c(row_stats_toolbox_fun, aces_functions,
                             "quantify_population_config")) %dopar% {
         #calling a function
-        tempMatrix <- quantify_population_config(df[n,], include_bf, rand.seed = rand.seed+n,
-                                               parallelize_bf = FALSE,
+        tempMatrix <- quantify_population_config(df_in[n,], rand.seed = rand.seed,
                                                stat_exclude_list = stat_exclude_list,
-                                               agreement = agreement) 
+                                               strength_type = strength_type, delta = delta,
+                                               is_delta_relative = is_delta_relative,
+                                               use_pseudo_samples = use_pseudo_samples) 
         tempMatrix
       }
       #stop cluster
@@ -915,10 +940,11 @@ quantify_population_configs <- function(df_in, overwrite = TRUE,
       # Process effect sizes serially and bind rows into one dataframe
       for (n in seq(1,n_sims)) {
         print(n)
-        df_list[[n]] <- quantify_population_config(df_in[n,], include_bf, rand.seed = rand.seed+n, 
-                                            parallelize_bf = FALSE, 
+        df_list[[n]] <- quantify_population_config(df_in[n,], rand.seed = rand.seed, 
                                             stat_exclude_list = stat_exclude_list,
-                                            agreement = agreement) 
+                                            strength_type = strength_type, delta = delta,
+                                            is_delta_relative = is_delta_relative,
+                                            use_pseudo_samples = use_pseudo_samples) 
       }
       df <- bind_rows(df_list)
     }
@@ -935,13 +961,14 @@ quantify_population_configs <- function(df_in, overwrite = TRUE,
 }
 
 
-quantify_population_config <- function(df, include_bf = FALSE, rand.seed = 0, 
-                                      parallelize_bf = FALSE, stat_exclude_list = NULL, agreement = "ldt") {
+quantify_population_config <- function(df, rand.seed = 0, 
+                                      parallelize_bf = FALSE, stat_exclude_list = NULL, 
+                                      strength_type = "hnst", delta, is_delta_relative = FALSE,
+                                      use_pseudo_samples = FALSE) {
   #' @description Quantifies mean and comparison error of various candidate 
   #' statistics across repeated samples specified by input population parameters
   #' 
   #' @param df input dataframe with a single row
-  #' @param include_bf flag whether to include bayes factor in calculation
   #' @param rand.seed seed for random number generation
   #' @param parallelize_bf  flag to parallize calculation of bayes factor 
   #' (not recommended since each pop. param set is already parallelized 
@@ -949,39 +976,70 @@ quantify_population_config <- function(df, include_bf = FALSE, rand.seed = 0,
   #' 
   #' @return df_out output dataframe with a single row, with pop. params and the 
   #' mean and std of each candidate statistic across samples along with their 
-  #' comparison error for determining higher agreement.
+  #' comparison error for determining higher strength.
   
   save(list = ls(all.names = TRUE), file = "temp/quantify_population_config.RData",envir = environment())
-  # # load(file = "temp/quantify_population_config.RData")
+  # load(file = "temp/quantify_population_config.RData")
   
   if (dim(df)[1] != 1) stop("Need to input a single row of df")
   set.seed(rand.seed)
   
-  # sprintf("%.3f+-")
+ 
   
-  # Use Exp 1 and 2 coefficients to generate data from normalized base data
-  x_1a = matrix(rnorm(df$n_samples * df$n_1a, mean = df$mu_1a, 
-                      sd = df$sigma_1a), nrow = df$n_samples, 
+  # Pseudo sampling
+  # Since we are comparing repeated pairs of samples from two experiments, we 
+  # can generate a small number of samples from both experiemnts and then compare
+  # them in a pairwise fashion. Pseudo_indices are the index from each series of samples
+  if (use_pseudo_samples) {
+    tot_samples <- df$n_samples
+    # Calculate minimum number of n_actual_samples needed to get total samples
+    df$n_actual_samples <- ceiling(sqrt(df$n_samples))
+    
+    all_pseudo_sample_indices <- expand.grid(exp_1 = seq(1,df$n_actual_samples,1), exp_2 = seq(1,df$n_actual_samples,1))
+    if (dim(all_pseudo_sample_indices)[1]<df$n_samples) {stop("not enough pseudo samples generated")}
+    row_pseudo_indicies <- sample.int(dim(all_pseudo_sample_indices)[1], tot_samples, replace = FALSE)
+    pseudo_indicies <- all_pseudo_sample_indices[row_pseudo_indicies,]
+
+  }else{
+    tot_samples <- df$n_samples
+    df$n_actual_samples <- df$n_samples
+    pseudo_indicies = data.frame(exp_1 = seq(1,df$n_actual_samples,1), exp_2 = seq(1,df$n_actual_samples,1))
+  }
+  
+
+  
+  # Generate samples and quantify candidate statistics for experiment 1
+  x_1a = matrix(rnorm(df$n_actual_samples * df$n_1a, mean = df$mu_1a, 
+                      sd = df$sigma_1a), nrow = df$n_actual_samples, 
                 ncol = df$n_1a)
-  x_1b = matrix(rnorm(df$n_samples * df$n_1b, mean = df$mu_1b, 
-                      sd = df$sigma_1b), nrow = df$n_samples, 
+  x_1b = matrix(rnorm(df$n_actual_samples * df$n_1b, mean = df$mu_1b, 
+                      sd = df$sigma_1b), nrow = df$n_actual_samples, 
                 ncol = df$n_1b)
-  
-  x_2a = matrix(rnorm(df$n_samples * df$n_2a, mean = df$mu_2a, 
-                      sd = df$sigma_2a), nrow = df$n_samples, 
-                ncol = df$n_2a)
-  x_2b = matrix(rnorm(df$n_samples * df$n_2b, mean = df$mu_2b, 
-                      sd = df$sigma_2b), nrow = df$n_samples, 
-                ncol = df$n_2b)
-  
-  
-  
-  # Calculate effect sizes for both experiments
-  dfs_1 <- quantify_row_stats(x_a = x_1a, x_b = x_1b, parallelize_bf = FALSE, 
-                                     stat_exclude_list = stat_exclude_list, conf.level = 1 - df$alpha_1)
-  dfs_2 <- quantify_row_stats(x_a = x_2a, x_b = x_2b, parallelize_bf = FALSE, 
-                                     stat_exclude_list = stat_exclude_list, conf.level = 1 - df$alpha_2)
+  dfs_1 <- 
+    quantify_row_stats(x_a = x_1a, x_b = x_1b, parallelize_bf = FALSE, 
+                       delta = delta, is_delta_relative = is_delta_relative,
+                       stat_exclude_list = stat_exclude_list, 
+                       conf.level = 1 - df$alpha_1)
   stat_list <- colnames(dfs_1)
+  
+  
+  # Generate samples and quantify candidate statistics for experiment 1
+  if (!is.na(df$mu_2a)) {
+  x_2a = matrix(rnorm(df$n_actual_samples * df$n_2a, mean = df$mu_2a, 
+                      sd = df$sigma_2a), nrow = df$n_actual_samples, 
+                ncol = df$n_2a)
+  x_2b = matrix(rnorm(df$n_actual_samples * df$n_2b, mean = df$mu_2b, 
+                      sd = df$sigma_2b), nrow = df$n_actual_samples, 
+                ncol = df$n_2b)
+  dfs_2 <- 
+    quantify_row_stats(x_a = x_2a, x_b = x_2b, parallelize_bf = FALSE, 
+                       delta = delta, is_delta_relative = is_delta_relative,
+                       stat_exclude_list = stat_exclude_list, 
+                       conf.level = 1 - df$alpha_2)
+  } else {
+    dfs_2 <- dfs_1
+  }
+  
   
   
   # save(list = ls(all.names = TRUE), file = "temp/quantify_population_config.RData",envir = environment())
@@ -1005,14 +1063,15 @@ quantify_population_config <- function(df, include_bf = FALSE, rand.seed = 0,
   # Use decision rules that are defined in row_stats_toolbox, stored as attributes 
   # to dfs_1 and dfs_2
   for (i in seq_along(stat_list)) {
-    # Determine if exp 1 has lower disagreement than (ldt) than exp 2
+  
+    # Determine if exp 1 has high null strength than exp 2
     # Candidates that returns NaNs are automatically designated as a wrong designation
-    dfc[[paste("fract_", stat_list[i], "_1",agreement, "2", sep='')]] <- 
-      sum(match.fun(attr(dfs_1, agreement)[[stat_list[i]]])
-          (abs(dfs_1[[stat_list[i]]]), 
-            abs(dfs_2[[stat_list[i]]])), na.rm = TRUE) / df$n_samples
+    dfc[[paste("fract_", stat_list[i], "_1",strength_type, "2", sep='')]] <- 
+      sum(match.fun(attr(dfs_1, strength_type)[[stat_list[i]]])
+          (abs(dfs_1[[stat_list[i]]])[pseudo_indicies[,1]], 
+            abs(dfs_2[[stat_list[i]]])[pseudo_indicies[,2]]), na.rm = TRUE) / df$n_samples
     # Calculate different of effect size between experiments
-    dfc[[paste("mean_diff_", stat_list[i], "_1",agreement,"2", sep='')]] <-
+    dfc[[paste("mean_diff_", stat_list[i], "_1",strength_type,"2", sep='')]] <-
       abs(dfc[[paste("exp2_mean_", stat_list[i],sep='')]]) -
       abs(dfc[[paste("exp1_mean_", stat_list[i],sep='')]])
   }
@@ -1020,7 +1079,7 @@ quantify_population_config <- function(df, include_bf = FALSE, rand.seed = 0,
 
   df_out <- cbind(df, dfc)
   
-  if (any(is.nan(data.matrix(df_out))) || is.nan(dfc[[paste("fract_", stat_list[i], "_1",agreement, "2", sep='')]]))
+  if (any(is.nan(data.matrix(df_out))) || is.nan(dfc[[paste("fract_", stat_list[i], "_1",strength_type, "2", sep='')]]))
     { save(list = ls(all.names = TRUE),
     file = "temp/quantify_population_config.RData",envir = environment())}
   
@@ -1034,11 +1093,13 @@ quantify_population_config <- function(df, include_bf = FALSE, rand.seed = 0,
   # t-ratio to measure
   t_scores_1 <- row_tscore_2s(x_1a, x_1b)
   t_crits_1 <- qt(p = df$alpha_1, df = df$n_1a + df$n_1b -1, lower.tail = TRUE) 
+  df_out$exp1_t_ratio_mean <- mean(t_scores_1/t_crits_1)
+  
+  if (!is.na(df$mu_2a)) {
   t_scores_2 <- row_tscore_2s(x_2a, x_2b)
   t_crits_2 <- qt(p = df$alpha_2, df = df$n_2a + df$n_2b - 1, lower.tail = TRUE) 
-  df_out$exp1_t_ratio_mean <- mean(t_scores_1/t_crits_1)
   df_out$exp2_t_ratio_mean <- mean(t_scores_2/t_crits_2)
-
+  }
   
   # browser()
   # save(list = ls(all.names = TRUE), file = "temp/quantify_population_config.RData",envir = environment())
@@ -1048,7 +1109,7 @@ quantify_population_config <- function(df, include_bf = FALSE, rand.seed = 0,
 }
 
 
-tidy_agreement_contest <- function (df, gt_colname, var_prefix, long_format = TRUE,
+tidy_strength_contest <- function (df, gt_colname, var_prefix, long_format = TRUE,
                                    ref_colname = NULL) {
   #' @description Converts comparison error rates for all candidate statistics 
   #' from wide format to long format. 
@@ -1060,8 +1121,8 @@ tidy_agreement_contest <- function (df, gt_colname, var_prefix, long_format = TR
   #' 
   #' @param df input data
   #' @param gt_colname column names in df that serves as independent variable
-  #'  and groundtruth for determining whether exp 1 or 2 has higher 
-  #'  agreement for each pop. param set.
+  #'  and ground truth for determining whether exp 1 or 2 has higher 
+  #'  strength for each pop. param set.
   #' @param var_prefix
   #' @param long_format flag to convert comparison error to long format
   #' @param ref_colname string of column name for candidate statistics that is a
@@ -1070,8 +1131,8 @@ tidy_agreement_contest <- function (df, gt_colname, var_prefix, long_format = TR
   #' 
   #' @return df_tidy tidy (long) version of input dataframe
   
-  save(list = ls(all.names = TRUE), file = "temp/tidy_agreement_contest.RData",envir = environment())
-  # # load(file = "temp/tidy_agreement_contest.RData")
+  save(list = ls(all.names = TRUE), file = "temp/tidy_strength_contest.RData",envir = environment())
+  # # load(file = "temp/tidy_strength_contest.RData")
   
   # Check if gt_colname exists
   if (length(grep(gt_colname, names(df))) == 0) stop("gt_colname does not exist in dataframe")
@@ -1158,8 +1219,7 @@ pretty_stat_labels<- function(df, var_prefix) {
 }
 
 
-plot_comparison_error <- function(df_pretty, fig_name, fig_path, y_ax_str, 
-                                   compare_string = "Lesser") {
+plot_comparison_error <- function(df_pretty, fig_name, fig_path, y_ax_str) {
   #' @description Plot comparison error rates for candidates effect size statistics
   #' 
   #' @param df_pretty dataframe of comparison error rates in long pretty format
@@ -1167,8 +1227,6 @@ plot_comparison_error <- function(df_pretty, fig_name, fig_path, y_ax_str,
   #' @param fig_path path to output figures saved to disk
   #' @param y_ax_str String denoting independent variable for comparison error plot. 
   #' Either mu[DM], sigma[D], or df[D].
-  #' @param compare_string String to describe direction to higher agreement, either
-  #'  "Lesser" or "Higher"
   #' 
   #' @return no return, exports figures to disk
   
@@ -1248,14 +1306,14 @@ plot_comparison_error <- function(df_pretty, fig_name, fig_path, y_ax_str,
   sig_colors[df_result$bs_ci_mean_lower>0.5 & df_result$bs_ci_mean_upper>0.5] = 
     rgb(255, 0, 0,maxColorValue = 255)
 
+  
   # Basic violin plot
   p <- ggplot(df_result, aes(x=name,  y=mean, group=name)) +
     geom_hline(yintercept = 0.5, size=0.5, color="grey") +
     geom_linerange(aes(ymin = bs_ci_mean_lower, ymax = bs_ci_mean_upper), size = 0.5) +
     geom_point(size=1,fill="white", shape = 1) + 
     xlab("Statistic") +
-    ylab(parse(text=paste("Error~Rate~(~",compare_string,"~phantom(.)*", y_ax_str,
-                          "*phantom(.))~phantom(.)~phantom(.)~phantom(.)~phantom(.)"))) +
+    ylab(parse(text= y_ax_str)) +
     scale_x_discrete(labels = parse(text = levels(df_pretty$name))) +
     expand_limits(y = c(0,1.1)) +
     geom_text(y = 1.07+siff_vjust, aes(label = sig_labels), 
@@ -1299,7 +1357,7 @@ plot_mean_t_ratio_samples <- function(df_init, fig_path,fig_name) {
     annotate("label",label=ifelse(ks_p_val$p.value>0.05, 
                                   sprintf('p = %.3f', ks_p_val$p.value),
                                   sprintf('p = %.2e', ks_p_val$p.value))
-             , x=0, y=1.07*ymax, 
+             , x=mean(range(df$t_ratio)), y=1.07*ymax, 
              size=2, fill = "white",label.size = NA)
   # print(p)
   save_plot(paste(fig_path, fig_name, sep = ""), p, ncol = 1, nrow = 1, 
@@ -1307,33 +1365,33 @@ plot_mean_t_ratio_samples <- function(df_init, fig_path,fig_name) {
   
 }
 
-process_agreement_contest <- function(df_init, gt_colname, y_ax_str, out_path = paste(fig_path, "/temp",sep=''),
-                                      fig_name, fig_path, var_prefix = "fract",include_bf = TRUE,
+process_strength_contest <- function(df_init, gt_colname, measure_pretty_str, out_path = paste(fig_path, "/temp",sep=''),
+                                      fig_name, fig_path, var_prefix = "fract",
                                       parallel_sims = TRUE, is_plotted = TRUE, 
                                       stat_exclude_list= c("ldm", "rldm"),
-                                      agreement = "ldt") {
+                                      strength_type = "hnst", delta, is_delta_relative,
+                                     use_pseudo_samples = FALSE) {
   #' @description 
   #' 
   #' @param df_init dataframe of population param sets by row
   #' @param gt_colname column names in df that serves as independent variable
   #'  and groundtruth for determining whether exp 1 or 2 has higher 
-  #'  agreement for each pop. param set.
+  #'  strength for each pop. param set.
   #' @param out_path path to export data files
-  #' @param y_ax_str pretty format of independent variable
+  #' @param measure_pretty_str pretty format of independent variable
   #' @param fig_path path to export figures
   #' @param fig_name filename of figure exported to disk
   #' @param fig_path path to output figures saved to disk
   #' @param var_prefix string suffix to identify the columns that should use
-  #' @param include_bf flag to include bayes factor in calculation (extremely slow)
   #' @param parallel_sims flat to process simulation (pop param sets) in parallel
   #' @param is_plotted flag whether results should be plotted and exported to disk
   #' @param stat_exclude_list list of candidate statistics to excluide in the 
   #' analysis
   #' 
   #' @return all_dfs a named list of all dataframes for each of the processing steps
-
-  save(list = ls(all.names = TRUE), file = "temp/process_agreement_contest.RData",envir = environment())
-  # load(file = "temp/process_agreement_contest.RData")
+  
+  save(list = ls(all.names = TRUE), file = "temp/process_strength_contest.RData",envir = environment())
+  # load(file = "temp/process_strength_contest.RData")
   dir.create(file.path(getwd(),out_path), showWarnings = FALSE)
   dir.create(file.path(getwd(),fig_path), showWarnings = FALSE)
   
@@ -1343,28 +1401,41 @@ process_agreement_contest <- function(df_init, gt_colname, y_ax_str, out_path = 
   # Quantify effect sizes in untidy matrix
   df_es <- quantify_population_configs(df = df_init,overwrite = TRUE, out_path = out_path,
                                       data_file_name = paste(fig_name,".rds",sep = ""),
-                                      include_bf = include_bf,parallel_sims = parallel_sims,
+                                      parallel_sims = parallel_sims,
                                       stat_exclude_list=stat_exclude_list,
-                                      agreement = agreement)
+                                      strength_type = strength_type, delta = delta,
+                                      is_delta_relative = is_delta_relative,
+                                      use_pseudo_samples = use_pseudo_samples)
   
+  is_single_exp = any(is.na(df_es$mu_2a)) || any(is.na(df_es$mu_2b))
+  
+  if (!is_single_exp) {
   
   # Tidy matrix by subtracting ground truth and normalizing to a reference variable if necessary
-  df_tidy <- tidy_agreement_contest(df = df_es, gt_colname = gt_colname,
+  df_tidy <- tidy_strength_contest(df = df_es, gt_colname = gt_colname,
                                     var_prefix = var_prefix,long_format = TRUE,
                                     ref_colname = NULL)
   df_pretty <- pretty_stat_labels(df = df_tidy, var_prefix = var_prefix)
   
   # Plot effect size results
   if (is_plotted) {
-    df_compare_string <- tibble(lt="Lesser", gt = "Greater")
+    # df_compare_string <- tibble(lt="Lesser", gt = "Greater")
  
+
+    df_inequality <- tibble("gt"="Greater", "lt"="Lesser")
+    inequality_str <- df_inequality[[attr(df_init,paste('df_',strength_type,sep=''))[[gt_colname]]]]
+    
+    y_ax_str <- paste("Error~Rate~(~",inequality_str,"~phantom(.)*", measure_pretty_str,
+          "*phantom(.))~phantom(.)~phantom(.)~phantom(.)~phantom(.)")
+    
     df_plotted <- 
-      plot_comparison_error(df = df_pretty, fig_name = fig_name, fig_path = fig_path, 
-                             compare_string = df_compare_string[[attr(df_init,paste("df_",agreement,sep=""))[[gt_colname]]]],
+      plot_comparison_error(df = df_pretty, fig_name = fig_name, fig_path = fig_path,
                              y_ax_str = y_ax_str)
     
     plot_mean_t_ratio_samples(df = df_es, fig_path = fig_path, fig_name = paste("t-ratio_", fig_name, sep=""))
       
+  }
+  } else {df_tidy <- NULL; df_pretty = NULL; df_plotted = NULL;
   }
   
   # Package dataframes throughout processing into single list for return
@@ -1375,7 +1446,7 @@ process_agreement_contest <- function(df_init, gt_colname, y_ax_str, out_path = 
   all_dfs[[3]] <- df_pretty; 
   if (exists("df_plotted")) {all_dfs[[4]] <- df_plotted; }
   
-  # save(list = ls(all.names = TRUE), file = "temp/process_agreement_contest.RData",envir = environment())
+  # save(list = ls(all.names = TRUE), file = "temp/process_strength_contest.RData",envir = environment())
   
   # Some candidate stats may return NaNs, visualize wist histogram of fraction 
   # of NaN samples across simulations
@@ -1388,7 +1459,7 @@ process_agreement_contest <- function(df_init, gt_colname, y_ax_str, out_path = 
 
 plot_nincluded_samples<- function(df = df_es, var_prefix = "nincluded",fig_name = fig_name, fig_path = fig_path) {
   
-  # save(list = ls(all.names = TRUE), file = "temp/plot_nincluded_sampless.RData",envir = environment())
+  save(list = ls(all.names = TRUE), file = "temp/plot_nincluded_sampless.RData",envir = environment())
   # load(file = "temp/plot_nincluded_sampless.RData")
   
   
@@ -1396,8 +1467,8 @@ plot_nincluded_samples<- function(df = df_es, var_prefix = "nincluded",fig_name 
   matched_vars <- grep(var_prefix,colnames(df), perl=TRUE, value=TRUE)
   
   
-  df_nins <- df %>% pivot_longer(matched_vars, names_to = "variable", values_to = "count") %>% select(variable, count, n_samples)
-  df_nins$count_prc = 1-df_nins$count/df_nins$n_samples
+  df_nins <- df %>% pivot_longer(matched_vars, names_to = "variable", values_to = "count") %>% select(variable, count, n_actual_samples)
+  df_nins$count_prc = 1-df_nins$count/df_nins$n_actual_samples
   # df_nins$variable <- sapply(df_nins$variable, function(x) {substring(x,17, nchar(x))})
   df_nins$variable <- as.factor(df_nins$variable)
   levels(df_nins$variable) <- as.factor(attr(df,"varnames_pretty") )
@@ -1423,17 +1494,17 @@ plot_nincluded_samples<- function(df = df_es, var_prefix = "nincluded",fig_name 
 }
 
 plot_stats_covary_indvar <- function(df, indvar, indvar_pretty, fig_name, fig_path,
-                                     dir_to_better=1, alpha = 0.05) {
+                                     dir_to_stronger = 1, alpha = 0.05) {
   #' @description Plot mean values across samples of candidate statistics versus 
   #' a swept independent variable, and calculates correlation with spearman rho.
   #' 
   #' @param df input dataframe of processed pop. params (returned from 
-  #' process_agreement_contest)
-  #' @param indvar string of the column name dscribing the indepedent variable, 
-  #' will be one of the agreement parameters
+  #' process_strength_contest)
+  #' @param indvar string of the column name describing the independent variable, 
+  #' will be one of the strength measures
   #' @param fig_name base name of exported figure
   #' @param fig_path path of eported figure
-  #' @param dir_to_better which direction leads to higher agreements (+1,-1)
+  #' @param dir_to_stronger which direction leads to higher strength (+1,-1)
   #' @param alpha confidence level
   #' 
   #' @return df_mean_stat dataframe of spearman correlation and regression of each 
@@ -1489,7 +1560,7 @@ plot_stats_covary_indvar <- function(df, indvar, indvar_pretty, fig_name, fig_pa
     # scale_y_continuous(breaks = NULL)+
     theme_classic(base_size=8) + 
     theme(strip.text.x = element_text( margin = margin( b = 1, t = 1) ))
-  if (dir_to_better==1) {
+  if (dir_to_stronger==1) {
     gg <- gg + scale_x_reverse(breaks=round(seq(min(df_means2[[indvar]]), max(df_means2[[indvar]]), 
      (max(df_means2[[indvar]]) - min(df_means2[[indvar]]))),2) )
   }else {
@@ -1526,7 +1597,7 @@ plot_stats_covary_indvar <- function(df, indvar, indvar_pretty, fig_name, fig_pa
     if (length(unique((abs(df_sub$mean_value)))) > 1) {
       # Spearman correlation
       tryCatch({
-      ci_spearman = ci_cor(x = abs(df_sub[[indvar]])*-dir_to_better, 
+      ci_spearman = ci_cor(x = abs(df_sub[[indvar]])*-dir_to_stronger, 
                           y = abs(df_sub$mean_value), R = 1e5,
                           method = "spearman", type = "bootstrap", boot_type = "basic", 
                           probs = c(alpha/(2*length(exp1_mean_vars)), 
@@ -1550,7 +1621,7 @@ plot_stats_covary_indvar <- function(df, indvar, indvar_pretty, fig_name, fig_pa
       df_mean_stat$spearman_rho_high[n] <- 0
     }
     # Linear regression
-    fit <- lm(y2 ~ y1, data = tibble(y1 = abs(df_sub[[indvar]])*-dir_to_better,
+    fit <- lm(y2 ~ y1, data = tibble(y1 = abs(df_sub[[indvar]])*-dir_to_stronger,
                                          y2 = abs(df_sub$mean_value)))
     conf_int <- confint(fit, "y1", level = 1-0.05/length(exp1_mean_vars))
     df_mean_stat$slope[n] = fit$coefficients[2]
