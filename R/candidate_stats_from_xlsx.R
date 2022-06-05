@@ -52,8 +52,8 @@ compute_stats_from_xlsx <- function(xlsx_path, xlsx_sheet_name, out_path,
     rcred_bound_lo = rep(0,dim(df)[1]), rcred_bound_hi = rep(0,dim(df)[1])
     )
   
-  xbar_str = paste("x","\U00AF",sep="")
-  ybar_str = paste("y","\U00AF",sep="")
+  xbar_str = paste("x̅",sep="")
+  ybar_str = paste("y̅",sep="")
   alphadm_str = paste("\U03B1","DM",sep="")
   for (n in seq(1, dim(df)[1]) ) {
     # Simulate data points for input into functions

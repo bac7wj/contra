@@ -11,10 +11,9 @@ source("R/aces.R")
 
 # User defined functions
 plot_experiment_pair <- function(xa1,xb1,xa2,xb2, fig_num, fig_path, base_name, 
-                             data_scale = "absolute", ylims = c(NULL,NULL), 
-                             dm_ylims = c(NULL,NULL), dm_ybreaks = c(NULL,NULL), 
-                             conf.level.1 = 0.95, conf.level.2 = 0.95) {
-  save(list = ls(all.names = TRUE), file = "temp/debug.RData",envir = environment())
+                             data_scale = "absolute", ylims = c(NaN,NaN), 
+                             dm_ylims = c(NaN,NaN), dm_ybreaks = c(NaN,NaN), 
+                             conf.level.1 = 0.95, conf.level.2 = 0.95, ggsize = c(1.2, .65)) {
   #' @description 
   #' 
   #' 
@@ -32,14 +31,17 @@ plot_experiment_pair <- function(xa1,xb1,xa2,xb2, fig_num, fig_path, base_name,
   #' 
   #' @return null exports various plots to disk
   
-  # load(file = "temp/debug.RData")
+  save(list = ls(all.names = TRUE), file = "temp/plot_experiment_pair.RData",
+       envir = environment())
+  # load(file = "temp/plot_experiment_pair.RData")
+
   
   na1 = length(xa1); nb1 = length(xb1)
   na2 = length(xa2); nb2 = length(xb2)  
-  blank_df <- tibble(group=c("X","Y"), y=ylims)
+  blank_df <- tibble(group=c("x","y"), y = ylims)
   
   # Experiment 1
-  df <- tibble(group = as.factor(c(rep("X",length(xa1)), rep("Y",length(xb1)))), y = c(xa1,xb1))
+  df <- tibble(group = as.factor(c(rep("x",length(xa1)), rep("y",length(xb1)))), y = c(xa1,xb1))
   df_stats <- df %>% group_by(group) %>% summarise(mean = mean(y),sd = sd(y))
   gg1 <- ggplot(data=df, aes(x=group, y=y)) +
     geom_jitter(width = 0.2, size=0.6, alpha = 0.5,color = grp_color[1],shape=16) + 

@@ -47,7 +47,7 @@ xa2 <- (a2-mean(a2))/sd(a2)*sqrt(2.1^2/2) + 10
 xb2 <- (b2-mean(b2))/sd(b2)*sqrt(2.7^2/2) + 11.2
 # Plot experiments and Difference of Means
 gg_mu <- plot_experiment_pair(xa1, xb1, xa2, xb2, fig_num=fig_num, fig_path=fig_path, base_name="_1_unsc_mu", 
-                 ylims = c(6,14), dm_ylims = c(-2.25,2.25), dm_ybreaks=seq(-2,2,2))
+                 ylims = c(6,14), dm_ylims = c(-2.25,2.25), dm_ybreaks=seq(-2,2,2), ggsize = ggsize)
 
 
 # Increase alpha
@@ -55,7 +55,7 @@ gg_mu <- plot_experiment_pair(xa1, xb1, xa2, xb2, fig_num=fig_num, fig_path=fig_
 # Keep group 1, change alpha only
 gg_mu_alpha <- plot_experiment_pair(xa1, xb1, xa1, xb1, fig_num=fig_num, fig_path=fig_path, base_name="_4_unsc_alpha", 
                                 ylims = c(6,14), dm_ylims = c(-2.25,2.25), dm_ybreaks=seq(-2,2,2),
-                                conf.level.2 = 1-0.05/100)
+                                conf.level.2 = 1-0.05/100, ggsize = ggsize)
 # Steal jitter positions from mu_plot1 to use for alpha_plot2 to show they are 
 # exactly the same points
 q1 <- ggplot_build(gg_mu$gg1)
@@ -73,7 +73,7 @@ xa3 <- (a2-mean(a2))/sd(a2)*sqrt(4.^2/2) + 10
 xb3 <- (b2-mean(b2))/sd(b2)*sqrt(4.^2/2) + 10.3
 # Plot experiments and Difference of Means
 plot_experiment_pair(xa1,xb1,xa3,xb3, fig_num=fig_num, fig_path=fig_path, base_name="_2_unsc_sigma", 
-                 ylims = c(6,14), dm_ylims = c(-2.25,2.25), dm_ybreaks=seq(-2,2,2))
+                 ylims = c(6,14), dm_ylims = c(-2.25,2.25), dm_ybreaks=seq(-2,2,2), ggsize = ggsize)
 
 
 # Increased sample size for experiment 2
@@ -87,7 +87,7 @@ xa3 <- (a3-mean(a3))/sd(a3)*sqrt(2.1^2/2) + 10
 xb3 <- (b3-mean(b3))/sd(b3)*sqrt(2.1^2/2) + 10.3
 # Plot experiments and Difference of Means
 plot_experiment_pair(xa1,xb1,xa3,xb3, fig_num=fig_num, fig_path=fig_path, base_name="_3_unsc_df", 
-                 ylims = c(6,14), dm_ylims = c(-2.25,2.25), dm_ybreaks=seq(-2,2,2))
+                 ylims = c(6,14), dm_ylims = c(-2.25,2.25), dm_ybreaks=seq(-2,2,2), ggsize = ggsize)
 
 
 
@@ -125,8 +125,9 @@ xa2 <- (a2-mean(a2))/sd(a2)*sqrt(1.30^2/2)/15 + 0.5
 xb2 <- (b2-mean(b2))/sd(b2)*sqrt(1.30^2/2)/15 + 0.54
 # Plot experiments and Difference of Means
 ggs_rmu <- plot_experiment_pair(xa1,xb1,xa2,xb2, fig_num=fig_num, fig_path=fig_path, dm_ylims = dm_ylims,
-                 dm_ybreaks = dm_ybreaks, base_name="_5_rel_rmu",data_scale = "relative")
-gg1 <- ggs_rmu$gg1 + geom_blank(data=tibble(group=c('X','X'),y=c(8,12))) + scale_y_continuous(breaks = seq(8,12,1))
+                 dm_ybreaks = dm_ybreaks, base_name="_5_rel_rmu",data_scale = "relative", ggsize = ggsize)
+gg1 <- ggs_rmu$gg1 + geom_blank(data=tibble(group=c('X','X'),y=c(8,12))) + 
+  scale_y_continuous(breaks = seq(8,12,1))
 save_plot(paste(fig_path, "/F",fig_num, "_", "_5_rel_rmu","_E1", ".tiff", sep = ""),
           gg1, dpi = 600, base_height = ggsize[1], base_width = ggsize[2])
 
@@ -134,7 +135,7 @@ save_plot(paste(fig_path, "/F",fig_num, "_", "_5_rel_rmu","_E1", ".tiff", sep = 
 # ---------------------
 gg_ralpha <- plot_experiment_pair(xa1,xb1,xa1/3.5,xb1/3.5, fig_num=fig_num, fig_path=fig_path, dm_ylims = dm_ylims,
                  dm_ybreaks = dm_ybreaks, base_name="_8_rel_alpha",data_scale = "relative",
-                 conf.level.2 = 1-0.05/75)
+                 conf.level.2 = 1-0.05/75, ggsize = ggsize)
 #Overwrite the figure for group 2 so it has exactly same placement as group 1
 q1 <- ggplot_build(gg1)
 q2 <- ggplot_build(gg_ralpha$gg2 + coord_cartesian(ylim = c(2.28,3.6)))
@@ -155,7 +156,7 @@ xa2 <- (a2-mean(a2))/sd(a2)*sqrt(1^2/2)/0.14e5 + 2.2e-4
 xb2 <- (b2-mean(b2))/sd(b2)*sqrt(1^2/2)/0.14e5 + 2.233e-4
 # Plot experiments and Difference of Means
 ggplots <- plot_experiment_pair(xa1,xb1,xa2,xb2, fig_num=fig_num, fig_path=fig_path, dm_ylims = dm_ylims,
-                 dm_ybreaks = dm_ybreaks, base_name="_6_rel_rsigma", data_scale = "relative")
+                 dm_ybreaks = dm_ybreaks, base_name="_6_rel_rsigma", data_scale = "relative", ggsize = ggsize)
 gg2 <- ggplots$gg2 + 
   geom_blank(data=data.frame(x=c(1, 1),y=c(1.8e-4, 3e-4)), aes(x=x, y=y)) +
   scale_y_continuous(breaks = c(1e-4, 2e-4, 3e-4), labels=function(x)
@@ -176,5 +177,5 @@ xa3 <- (a3-mean(a3))/sd(a3)*sqrt(18^2/2) + 100
 xb3 <- (b3-mean(b3))/sd(b3)*sqrt(18^2/2) + 101.5
 # Plot experiments and Difference of Means
 ggplots <- plot_experiment_pair(xa1, xb1, xa3, xb3, fig_num=fig_num, fig_path=fig_path, dm_ylims = dm_ylims,
-                 dm_ybreaks = dm_ybreaks, base_name="_7_rel_df", data_scale = "relative")
+                 dm_ybreaks = dm_ybreaks, base_name="_7_rel_df", data_scale = "relative", ggsize = ggsize)
 
