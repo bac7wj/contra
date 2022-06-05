@@ -1,5 +1,5 @@
 # Analysis of Conservative Effect Size (ACES)
-The official repository for (https://arxiv.org/abs/2201.01239)<p>
+The official repository for the most difference in means (https://arxiv.org/abs/2201.01239) and least difference in means (https://arxiv.org/abs/2205.12958) statistics<p>
 This repository is under continuous development for research. <p> <p>
 This repository contains code necessary to compute the following statistics <p>
 1. Most difference in means (&delta;<sub>M</sub>): calculated with mdm_credint() in R/aces.R, with relative=FALSE
@@ -53,7 +53,7 @@ Note: run "set_wd_here.R" in base directoy first to set working directory to the
 
    
    ## Least difference in Means 
-3. __ldm_t/__: scripts used to generate figures for &delta;<sub>L</sub> and r&delta;<sub>L</sub> manuscript (TBA)
+3. __ldm_t/__: scripts used to generate figures for &delta;<sub>L</sub> and r&delta;<sub>L</sub> manuscript (https://arxiv.org/abs/2205.12958)
    
    1. __figure2_covary_with_effect_strength_SF2-5__: examines how candidate statistics respond to controlled changes of effect strength. A valid statistics should respond in a consistent direction to increased effect strength across all effect strength measures.
    
