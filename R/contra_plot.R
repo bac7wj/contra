@@ -84,7 +84,8 @@ contra_plot <- function(df = df, sorted = NULL, col_x_pos = "auto",
     theme(axis.text.y = element_blank(), axis.title.y = element_blank(),
           axis.line.y = element_blank(), axis.ticks.y=element_blank(),
           axis.title = element_text(size = 7),
-          axis.text.x = element_text(size=7))
+          axis.text.x = element_text(size=7),
+          plot.margin = unit(c(0, 0, 0, 0), "null"))
   # gg_plt
   
   # Data frame of metadata for contra_plot
@@ -101,10 +102,10 @@ contra_plot <- function(df = df, sorted = NULL, col_x_pos = "auto",
 
   if (length(col_x_pos)==1 && col_x_pos=="auto") {
     max_nchars <- sapply(1:length(meta_list), function(x) max(c(nchar(df_meta[[meta_list[x]]]),nchar(meta_list[x]))))
-    col_x_pos = cumsum(max_nchars/sum(max_nchars)) - max_nchars/sum(max_nchars)[1]
-    col_x_pos[length(col_x_pos)] = 1
+    col_x_pos = cumsum(max_nchars/sum(max_nchars)*1.07) - max_nchars/sum(max_nchars)[1]
+    
     col_x_pos[1]=-.05
-    col_x_pos[4]=1.02
+    # col_x_pos[length(col_x_pos)] = 1.02
   }
 
   
@@ -122,13 +123,14 @@ contra_plot <- function(df = df, sorted = NULL, col_x_pos = "auto",
           axis.text.x = element_text(size=7, colour = "white"),
           axis.title.x = element_text(colour = "white"),
           axis.line.x.bottom = element_line(color="white"),
-          axis.ticks.x = element_line(color="white"))
+          axis.ticks.x = element_line(color="white"),
+          plot.margin = unit(c(0, 0, 0, 0), "null"))
   
 
   # Fill in metadata columns
   for (n in seq_along(col_x_pos)) {
     gg_tbl <- gg_tbl + geom_text(x = col_x_pos[n],label = df_meta[[meta_list[n]]], 
-                                 hjust = as.numeric(n == length(col_x_pos)),
+                                 hjust = 0.5 - as.numeric(n==1)/2, # + as.numeric(n == length(col_x_pos))/2,
                                  parse = TRUE, size = 2.5)
   }
   
@@ -152,200 +154,4 @@ df = data.frame(study = c("Auckland", "Block", "Doran", "Gamsu", "Morrison", "Pa
 
 df = rbind(df,df,df)
 contra_plot(df = df, sorted = "lower", col_x_pos="auto") 
-
-
-
-
-#   
-# # Method 1: cannot align table with top and bottom of chart
-# df_plot <- df
-# # df_plot[nrow(df) + c(1,2),] <- rep(NA, ncol(df))
-# df_plot$index <- 1:nrow(df_plot)
-# df_meta = subset( df, select = -c(lower,upper) )
-# gg_plt <- ggplot(data = df_plot, aes(y = index, x = estimate, xmin = lower, xmax = upper)) +
-#     geom_point() + 
-#     geom_errorbarh(height = 0.1) +
-#     expand_limits(y = ncol(df_plot) + 1) +
-#     xlab(xlabel) + ylab("") +
-#     theme_classic() +
-#     theme(axis.text.y = element_blank(), axis.ticks.y = element_blank(), 
-#           axis.line.y = element_blank() ) 
-# print(gg_plt)
-# 
-# adjustTheme <- ttheme_default(
-#   core = list(fg_params=list(cex = 0.8)),
-#   colhead = list(fg_params=list(cex = 0.7)),
-#   rowhead = list(fg_params=list(cex = 0.7)))
-# 
-# 
-# tableObject = tableGrob(df_meta,theme = gridExtra::ttheme_default(
-#   core = list(padding=unit(c(5, 39), "pt"))))
-# # tableObject$widths <- unit(rep(1/ncol(tableObject), ncol(tableObject)), "npc")
-# # tableObject$heights <- unit(rep(1/nrow(tableObject), nrow(tableObject)), "npc")
-# grid.arrange(arrangeGrob(tableObject, gg_plt, ncol = 2,widths = c(1/2,1/2)))
-# 
-# 
-# 
-# 
-# # Method 1.2: cannot align table with top and bottom of chart
-# df_plot <- df
-# # df_plot[nrow(df) + c(1,2),] <- rep(NA, ncol(df))
-# df_plot$index <- 1:nrow(df_plot)
-# df_meta = subset( df, select = -c(lower,upper) )
-# gg_plt <- ggplot(data = df_plot, aes(y = index, x = estimate, xmin = lower, xmax = upper)) +
-#   geom_point() + 
-#   geom_errorbarh(height = 0.1) +
-#   expand_limits(y = ncol(df_plot) + 1) +
-#   xlab(xlabel) + ylab("") +
-#   theme_classic() +
-#   theme(axis.text.y = element_blank(), axis.ticks.y = element_blank(), 
-#         axis.line.y = element_blank() ) 
-# 
-# gtable_table(df_meta)
-# g <- ggplotGrob(gg_plt)
-# 
-# tableObject = tableGrob(df_meta,theme= adjustTheme)
-# tableObject$widths <- unit(rep(1/ncol(tableObject), ncol(tableObject)), "npc")
-# tableObject$heights <- unit(rep(1/nrow(tableObject), nrow(tableObject)), "npc")
-# grid.arrange(arrangeGrob(tableObject, gg_plt, ncol = 2,widths = c(1/2,1/2)))
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# # Method 2: cow_plot : can't align
-# df_plot <- df
-# # df_plot[nrow(df) + c(1,2),] <- rep(NA, ncol(df))
-# df_plot$index <- 1:nrow(df_plot)
-# df_meta = subset( df, select = -c(lower,upper) )
-# gg_plt <- ggplot(data = df_plot, aes(y = index, x = estimate, xmin = lower, xmax = upper)) +
-#   geom_point() + 
-#   geom_errorbarh(height = 0.1) +
-#   expand_limits(y = ncol(df_plot) + 1) +
-#   xlab(xlabel) + ylab("") +
-#   theme_classic() +
-#   theme(axis.text.y = element_blank(), axis.ticks.y = element_blank(), 
-#         axis.line.y = element_blank() ) 
-# print(gg_plt)
-# tableObject = tableGrob(df_meta,theme= adjustTheme)
-# tableObject$widths <- unit(rep(1/ncol(tableObject), ncol(tableObject)), "npc")
-# tableObject$heights <- unit(rep(1/nrow(tableObject), nrow(tableObject)), "npc")
-# 
-# grid.arrange(arrangeGrob(cowplot::plot_grid(gg_plt, tableObject, align = "v", ncol=2)))
-# 
-# 
-# 
-# 
-# 
-# adjustTheme <- ttheme_default(
-#   core = list(fg_params=list(cex = 0.8)),
-#   colhead = list(fg_params=list(cex = 0.7)),
-#   rowhead = list(fg_params=list(cex = 0.7)))
-# 
-# grid.arrange(arrangeGrob(tableObject, gg_plt, ncol = 2,widths = c(1/2,1/2)))
-# 
-# 
-# 
-# # Method 2: cannot align table with top and bottom of chart
-# 
-# data_table <- ggplot(df_meta, aes(x = study, y = factor(City),
-#                               label = format(value, nsmall = 1), colour = City)) +
-#   geom_text(size = 3.5) + theme_bw() + scale_y_discrete(formatter = abbreviate,
-#                                                         limits = c("Minneapolis", "Raleigh", "Phoenix")) +
-#   opts(panel.grid.major = none, legend.position = "none",
-#        panel.border = none, axis.text.x = none,
-#        axis.ticks = none) + opts(plot.margin = unit(c(-0.5,
-#                                                       1, 0, 0.5), "lines")) + xlab(NULL) + ylab(NULL)
-# 
-# 
-# 
-# # Method 3: qplot
-# library(ggplot2)
-# library(gridExtra)
-# library(grid)
-# tg <- tableGrob(df_meta, rows=NULL)
-# tg$widths <- unit(rep(1/ncol(tg),ncol(tg)),"npc")
-# tg$heights <- unit(rep(1/nrow(tg),nrow(tg)),"npc")
-# 
-# gg_plt <- ggplot(data = df_plot, aes(y = index, x = estimate, xmin = lower, xmax = upper)) +
-#   geom_point() + 
-#   geom_errorbarh(height = 0.1) +
-#   expand_limits(y = ncol(df_plot) + 1, x = 5) +
-#   xlab(xlabel) + ylab("") +
-#   theme_classic() +
-#   theme(axis.text.y = element_blank(), axis.ticks.y = element_blank(), 
-#         axis.line.y = element_blank(), axis.line.x = element_blank()) +
-#   annotation_custom(ymin=-Inf, ymax=Inf, xmin=3, xmax=5, tg) 
-#   
-# 
-# print(gg_plt)
-# 
-# 
-# 
-# 
-# 
-# 
-# }
-# 
-# 
-# 
-# 
-# 
-# df_plot <- df
-# # df_plot[nrow(df) + c(1,2),] <- rep(NA, ncol(df))
-# df_plot$index <- 1:nrow(df_plot)
-# df_meta = subset( df, select = -c(lower,upper) )
-# 
-# gg_plt <- ggplot(data = df_plot, aes(y = index, x = estimate, xmin = lower, xmax = upper)) +
-#   geom_point() + 
-#   geom_errorbarh(height = 0.1) +
-#   expand_limits(y = ncol(df_plot) + 1) +
-#   xlab(xlabel) + ylab("") +
-#   theme_classic() +
-#   theme(axis.text.y = element_blank(), axis.ticks.y = element_blank(), 
-#         axis.line.y = element_blank() )
-# 
-# 
-# 
-# tab_base <- ggplot(dat, aes(y=label)) +
-#   ylab(NULL) + xlab("  ") + 
-#   theme(plot.title = element_text(hjust = 0.5, size=12), ## centering title on text
-#         axis.text.x=element_text(color="white"), ## need text to be printed so it stays aligned with figure but white so it's invisible
-#         axis.line=element_blank(),
-#         axis.text.y=element_blank(),axis.ticks=element_blank(),
-#         axis.title.y=element_blank(),legend.position="none",
-#         panel.background=element_blank(),panel.border=element_blank(),panel.grid.major=element_blank(),
-#         panel.grid.minor=element_blank(),plot.background=element_blank())
-# 
-# 
-# tab1 <- tab_base + 
-#   geom_text(aes(x=1, label=n)) + 
-#   ggtitle("n")
-# 
-# tab2 <- tab_base +
-#   geom_text(aes(x=1, label=total)) + 
-#   ggtitle("total")
-# 
-# 
-# 
-# adjustTheme <- ttheme_default(
-#   core = list(fg_params=list(cex = 0.8)),
-#   colhead = list(fg_params=list(cex = 0.7)),
-#   rowhead = list(fg_params=list(cex = 0.7)))
-# 
-# tableObject = tableGrob(df_meta,theme= adjustTheme)
-# tableObject$widths[-1] <- rep(unit(1/2,"null"), 4)
-# tableObject$heights <- unit(rep(1/nrow(tableObject), nrow(tableObject)), "npc")
-# 
-# 
-# grid.arrange(arrangeGrob(tableObject, gg_plt, ncol = 2,widths = c(1/2,1/2)))
-
-
-
-
-
-
-
 
