@@ -6,3 +6,4 @@ figure/*
 temp/
 *.csv
 */figure/*
+*.png
