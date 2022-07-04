@@ -149,14 +149,16 @@ contra_plot <- function(df = df, sorted = NULL, col_x_pos = "auto", xlabel = "Fo
             nchar(meta_list[x]))  ) + 3)
     rel_widths = max_nchars/sum(max_nchars)
     raw_x_pos = cumsum(max_nchars/sum(max_nchars))
-    col_x_pos = col_x_pos
-    col_x_pos[1]= -0.05
+    col_x_pos = raw_x_pos - raw_x_pos[1]
     col_x_pos[length(col_x_pos)] = 1.02
+    col_x_pos[1:2]= col_x_pos[1:2] - rep(0.05, 2)
+    col_x_pos[length(col_x_pos)-1] = col_x_pos[length(col_x_pos)-1] + 0.02
+    
     # TO DO FIX
     # for (n in seq(2,length(col_x_pos)-1)) {
     #   col_x_pos[n] = col_x_pos[n] - col_x_pos[n]/2
     # }
-    
+    # half to half on each end
     # extra_pad = 1-col_x_pos[length(col_x_pos)] + 0.05
     
   }
