@@ -7,42 +7,77 @@ library(grid)
 library(stringr)
 library(cowplot)
 
-confint_dm <- function(x, y, conf.level = 0.95, num_param_sims = 250/(1-conf.level), 
-                        plot=FALSE, relative = FALSE){
-  #
-  
-  xbar <- mean(x)
-  ybar <- mean(y)
-  s2x <- var(x)
-  s2y <- var(y)
-  m <- length(x)
-  n <- length(y)
-  
-  
-  xbar_sims <- rnorm(n = num_param_sims, mean = xbar, sd = sqrt(s2x / m))
-  ybar_sims <- rnorm(n = num_param_sims, mean = ybar, sd = sqrt(s2y / n))
 
-  
-  if(!relative){
-    dm <- ybar_sims - xbar_sims
-    estimate <- ybar - xbar
+pretty_number <- function(x) {
+  if (abs(x)>1000) {
+    num <- str_replace(str_replace(sprintf("%.1e", x),"e0", "e"), "-0","-")
+  } else if (abs(x) > 100) {
+    num <- sprintf("%.0f",x) 
+  } else if (abs(x) > 10) {
+    num <- sprintf("%.1f", x) 
+  } else if (abs(x) > 1) {
+    num <- sprintf("%.2f", x) 
+  } else if (abs(x) > .1) {
+    num <- sprintf("%.3f", x) 
   } else {
-    dm <- (ybar_sims - xbar_sims)/xbar_sims
-    estimate <- (ybar - xbar)/ xbar
+    num <- str_replace(str_replace(sprintf("%.1e", x),"e0", "e"), "-0","-")
   }
-  dm_bounds <- quantile(dm, c((1-conf.level)/2, 1-(1-conf.level)/2)) 
-  
-  
-  out <- list(conf_int = dm_bounds, estimate = estimate, relative = relative, conf.level = conf.level)
+  return(num)
+}
 
+norm_confint_dmeans <- function(mean_x, s_x, n_x, mean_y, s_y, n_y, 
+                                conf.level = 0.95, num_param_sims = 250/(1-conf.level), 
+                        plot = FALSE, relative = FALSE) {
+  #' @description calculate confidence interval of the 95% difference in means 
+  #' between group x (control) and group y (experiment) assuming normal 
+  #' distirbutions for the means of both.
+  #' Relative dm is calculated in unscaled or scaled difference in means, i.e.
+  #' y-x, or (y-x)/x respectively. Confidence intervals are calcualted with monte
+  #' carlo sampling from the sampling distributions. The number of monte carlo 
+  #' trials is based on the specified significance level.
+  #' 
+  #' @param mean_x 
+  #' @param s_x 
+  #' @param n_x 
+  #' @param mean_y 
+  #' @param s_y 
+  #' @param n_y 
+  #' @param conf.level 
+  #' @param plot 
+  #' @param relative 
+  #' 
+  #' @return 
+
+  save(list = ls(all.names = TRUE), file = "temp/norm_confint_dmeans.RData", 
+       envir = environment())
+  # load(file = "temp/norm_confint_dmeans.RData")
   
+  mean_x_sims <- rnorm(n = num_param_sims, mean = mean_x, sd = sqrt(s_x^2 / n_x))
+  mean_y_sims <- rnorm(n = num_param_sims, mean = mean_y, sd = sqrt(s_y^2 / n_y))
+
+  if (!relative) {
+    dm <- mean_y_sims - mean_x_sims
+    estimate <- mean_y - mean_x
+  } else {
+    dm <- (mean_y_sims - mean_x_sims)/mean_x_sims
+    estimate <- (mean_y - mean_x)/ mean_x
+  }
+  # Two tail quantiles
+  quants = c((1-conf.level)/2, 1-(1-conf.level)/2)
+  dm_bounds <- quantile(dm,  quants) 
+  
+  # Produce named list of output
+  out <- tibble(estimate = estimate, lower = unname(dm_bounds[1]), upper = unname(dm_bounds[2]), 
+           lower_quantile = quants[1], upper_quantile = quants[2],
+           relative = relative, conf.level = conf.level)
   return(out)
 }
   
 
 
-contra_plot <- function(df = df, sorted = NULL, col_x_pos = "auto", 
-                        ggsize = c(3, 6), fig_path = getwd(), fig_name = "contra_plot.png") {
+contra_plot <- function(df = df, sorted = NULL, col_x_pos = "auto", xlabel = "Fold Mean Difference",
+                        ggsize = c(3, 6), fig_path = getwd(), fig_name = "contra_plot.png",
+                        estimate_label = "est", plot_title = "Measurement") {
   #' @description produces a contra_plot, which visualizes the fold difference 
   #' in means between a control group and experiment group in a series of studies.
   #' 
@@ -58,6 +93,7 @@ contra_plot <- function(df = df, sorted = NULL, col_x_pos = "auto",
   save(list = ls(all.names = TRUE), file = "temp/contra_plot.RData", 
        envir = environment())
   # load(file = "temp/contra_plot.RData")
+  
   base_font_size = 6
   xaxis_font_size = 5
   
@@ -74,65 +110,90 @@ contra_plot <- function(df = df, sorted = NULL, col_x_pos = "auto",
     # geom_hline(aes(yintercept = index, color = color), size = 20) + 
     geom_rect(aes(xmin = -Inf, xmax = Inf, ymin = index-0.5, ymax = index+0.5, fill = color)) +
     geom_pointrange(shape = 22, fill = "black", size = .5, fatten =.5) +
-    # annotate("segment", x = 0, y = 0, xend = 0, yend = ncol(df_plot)+0.5) +
-    geom_segment(aes(x = 0, xend = 0, y = 0, yend = max(index) + 0.5), 
-                 linetype = 1, size = .5, color = "gray90") +
-    xlab("Fold Difference") + theme_classic() + 
+    annotation_custom(grid::textGrob(plot_title), 
+                      xmin = -Inf, xmax = Inf, ymin = max(df_plot$index)+1, ymax = max(df_plot$index)+1) +
+    annotate("segment", x = 0, y = 0, xend = 0, yend = max(df_plot$index)+0.5) +
+    # geom_segment(aes(x = 0, xend = 0, y = 0, yend = max(index) + 0.5), 
+    #              linetype = 1, size = .5, color = "gray90") +
+    # geom_vline(xintercept = 0, linetype = 1, size = .5, color = "gray70") +
+    xlab(xlabel) + theme_classic() + 
     coord_cartesian(ylim = c(0.5, max(df_plot$index) + 1.5)) +
-    scale_y_continuous(expand = c(0, 0), limits = c(0.5, max(df_plot$index) + 1.5)) +
+    scale_y_continuous(expand = c(0, 0)) + #, limits = c(0.5, max(df_plot$index) + 1.5)) +
     scale_color_identity() + scale_fill_identity() +
     theme(axis.text.y = element_blank(), axis.title.y = element_blank(),
           axis.line.y = element_blank(), axis.ticks.y=element_blank(),
           axis.title = element_text(size = 7),
           axis.text.x = element_text(size=7),
           plot.margin = unit(c(0, 0, 0, 0), "null"))
-  # gg_plt
+  gg_plt
   
   # Data frame of metadata for contra_plot
-  meta_list <- colnames(subset( df_plot, select = -c(lower,upper, color, index) ))
-  df_meta = subset( df_plot, select = -c(lower,upper) )
+  meta_list <- c(estimate_label, colnames(subset( 
+    df_plot, select = -c(estimate, lower,upper, color, index) )))
+  df_meta = cbind(data.frame(estimate = sapply(1:nrow(df), function(x) 
+    pretty_number(df$estimate[x]))),
+                  subset( df_plot, select = -c(lower, upper) ))
+  names(df_meta)[1] <- estimate_label
   
   # Get max Character
-  # Add extra blank row
   df_meta[nrow(df_meta) + 1,] <- rep(NA, ncol(df_meta))
   df_meta$index[nrow(df_meta)] <- nrow(df_meta)
-  # levels(df_meta$study) <- c(levels(df_meta$study),str_to_title(colnames(df_meta)[1]))
-  df_meta[nrow(df_meta),1:(ncol(df_meta)-2)] <-  
-    paste("bold(",str_to_title(colnames(df_meta)[1:(ncol(df_meta)-2)]), ")", sep="")
+  # Add column title as last entry to column title
+  pretty_hdrs <- paste0("bold(",str_to_title(colnames(df_meta)[1:(ncol(df_meta)-2)]), ")")
+  df_meta[nrow(df_meta),1:(ncol(df_meta)-2)] <-
+    paste0("bold(",str_to_title(colnames(df_meta)[1:(ncol(df_meta)-2)]), ")")
 
   if (length(col_x_pos)==1 && col_x_pos=="auto") {
-    max_nchars <- sapply(1:length(meta_list), function(x) max(c(nchar(df_meta[[meta_list[x]]]),nchar(meta_list[x]))))
-    col_x_pos = cumsum(max_nchars/sum(max_nchars)*1.07) - max_nchars/sum(max_nchars)[1]
+    max_nchars <- sapply(1:length(meta_list), function(x) 
+      max( c(nchar(df_meta[[meta_list[x]]][1:nrow(df_meta)-1]),
+            nchar(meta_list[x]))  ) + 3)
+    rel_widths = max_nchars/sum(max_nchars)
+    raw_x_pos = cumsum(max_nchars/sum(max_nchars))
+    col_x_pos = col_x_pos
+    col_x_pos[1]= -0.05
+    col_x_pos[length(col_x_pos)] = 1.02
+    # TO DO FIX
+    # for (n in seq(2,length(col_x_pos)-1)) {
+    #   col_x_pos[n] = col_x_pos[n] - col_x_pos[n]/2
+    # }
     
-    col_x_pos[1]=-.05
-    # col_x_pos[length(col_x_pos)] = 1.02
+    # extra_pad = 1-col_x_pos[length(col_x_pos)] + 0.05
+    
   }
 
-  
   gg_tbl <- ggplot(data = df_meta, aes(y = index)) +
     geom_rect(aes(xmin = -Inf, xmax = Inf, 
                   ymin = index - 0.5, 
                   ymax = index + 0.5, fill = color)) +
-    geom_hline(yintercept = nrow(df_meta)-0.5, color = "black", size = .5) +
-    scale_y_continuous(expand = c(0, 0), limits = c(0.5, max(df_meta$index) + 0.5)) +
-    scale_colour_identity() +  scale_fill_identity() +
+    geom_hline(yintercept = nrow(df_plot)+0.5, color = "black", size = .5) +
+    scale_y_continuous(expand = c(0, 0), limits = c(0.5, max(df_plot$index) + 1.5)) +
+    scale_x_continuous(expand = c(0, 0)) + #, limits = c(0,1.02)) +
+    scale_colour_identity() +  scale_fill_identity() + coord_cartesian(clip="off") +
     xlab("Force This Label White") + theme_classic()+ xlim(0, 1) +
     theme(axis.text.y = element_blank(), axis.title.y = element_blank(),
-          axis.line.y = element_blank(), axis.ticks.y=element_blank(),
+          axis.line.y = element_blank(), axis.ticks.y = element_blank(),
           axis.title = element_text(size = 7),
-          axis.text.x = element_text(size=7, colour = "white"),
           axis.title.x = element_text(colour = "white"),
-          axis.line.x.bottom = element_line(color="white"),
-          axis.ticks.x = element_line(color="white"),
+          axis.line.x.bottom = element_line(color = "white"),
+          # axis.ticks.x = element_line(color = "white"),
+          # axis.text.x = element_text(size = 7, colour = "white"),
           plot.margin = unit(c(0, 0, 0, 0), "null"))
-  
-
+  gg_tbl
   # Fill in metadata columns
   for (n in seq_along(col_x_pos)) {
-    gg_tbl <- gg_tbl + geom_text(x = col_x_pos[n],label = df_meta[[meta_list[n]]], 
-                                 hjust = 0.5 - as.numeric(n==1)/2, # + as.numeric(n == length(col_x_pos))/2,
+    gg_tbl <- gg_tbl + 
+      geom_text(x = col_x_pos[n],
+                label = c(df_meta[[meta_list[n]]][1:nrow(df_meta)-1], ""),
+                hjust = 0.5 - as.numeric(n == 1)/2 + as.numeric(n == length(col_x_pos))/2,
+                parse = FALSE, size = 2.5, color = c(rep("black", nrow(df_meta) - 1), "white"))
+  # }|
+  # for (n in seq_along(col_x_pos)) {
+  # Write column headers
+      gg_tbl <- gg_tbl + geom_text(x = col_x_pos[n],label = c(rep("", nrow(df_meta)-1), pretty_hdrs[n]), 
+                                 hjust = 0.5 - as.numeric(n == 1)/2 + as.numeric(n == length(col_x_pos))/2,
                                  parse = TRUE, size = 2.5)
   }
+  gg_tbl
   
   # Arrange plot and table side by side
   gg_grid_plot <- grid.arrange(gg_plt, gg_tbl, ncol = 2) 
@@ -144,14 +205,14 @@ contra_plot <- function(df = df, sorted = NULL, col_x_pos = "auto",
 
 
 
-
-df = data.frame(study = c("Auckland", "Block", "Doran", "Gamsu", "Morrison", "Papageorgiou", "Tauesch"),
-                control = c("36", "1", "4", "14", "3", "1", "8"),
-                treatment = c("60", "5", "11", "20", "7", "7", "10"),
-                estimate  = c(0.578, 0.165, 0.246, 0.700, 0.348, 0.139, 1.017),
-                lower = c(0.372, 0.018, 0.072, 0.333, 0.083, 0.016, 0.365),
-                upper = c(0.898, 1.517, 0.833, 1.474, 1.455, 1.209, 2.831))
-
-df = rbind(df,df,df)
-contra_plot(df = df, sorted = "lower", col_x_pos="auto") 
+# Example data to run
+# df = data.frame(study = c("Auckland", "Block", "Doran", "Gamsu", "Morrison", "Papageorgiou", "Tauesch"),
+#                 control = c("36", "1", "4", "14", "3", "1", "8"),
+#                 treatment = c("60", "5", "11", "20", "7", "7", "10"),
+#                 estimate  = c(0.578, 0.165, 0.246, 0.700, 0.348, 0.139, 1.017),
+#                 lower = c(0.372, 0.018, 0.072, 0.333, 0.083, 0.016, 0.365),
+#                 upper = c(0.898, 1.517, 0.833, 1.474, 1.455, 1.209, 2.831))
+# 
+# df = rbind(df,df,df)
+# contra_plot(df = df, sorted = "lower", col_x_pos="auto") 
 
