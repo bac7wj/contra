@@ -4,6 +4,6 @@
 .Ruserdata
 figure/*
 temp/
-*.csv
+
 */figure/*
 *.png

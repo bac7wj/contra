@@ -9,7 +9,7 @@ if (is.null(proj_path)) {
   library(rstudioapi)
   proj_path <-tryCatch( dirname(rstudioapi::getActiveDocumentContext()$path))
 }
-# Set w
+# Set working directory
 setwd(proj_path)
 
 # Create temp folder

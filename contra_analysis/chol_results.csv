@@ -1,0 +1,36 @@
+study_id,group_x,mean_x,s_x,n_x,group_y,mean_y,s_y,n_y,units,alpha_dm,spec,pmid,effect,study,year,ctrl,tx,loc
+1,Alfp-cre,3.45,0.24,6,Alfp-creTR?fl/fl,3.26,0.22,6,mmol/L,0.05,ms,24797634,0,Billion,2014,Alfp-cre, -TRBL,F1C
+2,ApoE-/-CD6WT,1251,161,10,ApoE-/-CD6-/-,1179,143,5,mg/dl,0.05,ms,29615096,0,Han,2018,ApoE-/-, -CD6,T1
+3,Cyp17AWT (F),2.29,0.53,7,Cyp17A-/-  (F),2.3,0.32,6,mmol/L,0.05,ms,32472014,0,Aherrahrou,2020,WT, -Cyp17A,T2
+4,VLDLr0-/- LpL1WT,141,34,8,VLDLr0-/- LpL1-/-,151,24,13,mg/dl,0.05,ms,11790777,0,Yagyu,2002,VLDLr0-/- , -LpL1,T1
+5,LDLr-/-,105,28,15,LDLr-/- + IFD,93.4,29,15,mmol/L,0.05/3,ms,9614153,0,Kirk,1998,LDLr-/-, +IFD,T2
+6,ApoE-/-CD6WT,2518,257,8,ApoE-/-CD6-/-,2876,506,6,mg/dl,0.05,ms,29615096,0,Han,2018,ApoE-/-, -CD6(M),T1
+7,Vehicle,1335,269,8,Probucol,1303,376,8,mg/dL,0.05/12,rb,24188322,0,Niimi,2013,Placebo, +Probucol,F1
+8,ApoE-/-,568,81,6,ApoE-/-  PAO,742,256,4,mg/dL,0.05,ms,27683551,0,Cimen,2016,ApoE-/-, +PAO,F5E
+9,Control,11.2,8.78,8,Probucol,15.3,6.55,8,mg/dL,0.05,mc,8040256,0,Sasahara,1994,Vehicle, +Probucol,T1
+10,ApoE-/- PAI-1WT,2503,266,11,ApoE-/- PAI-1-/- ,1984,252,13,mg/dl,0.05,ms,10712412,-1,Sjoland,2000,ApoE-/- , -PAI-1,T1
+11,Ldlr-/-Ad-Gal-RelnFL/FL,2087,531,15,Ldlr-/- Ad-Cre-RelnFL/FL,1487,364,16,mg/dl,0.05,ms,26980442,-1,Ding,2016,Ldlr-/- , -ReLnl,SF2B
+12,Vehicle,1335,269,8,Atorvastin,934,231.9310242,8,mg/dL,0.05/12,rb,24188322,-1,Niimi,2013,Vehicle, +Atorvastin,F1
+13,WTD -IF,4.78,1.207476708,20,WTD +IF,3.3,0.67,20,mmol/L,0.05/4,ms,9614153,-1,Kirk,1998,WTD, +IF,F1A
+14,Placebo,202,28.15209584,5,150 mg Atorvastatin,135.2,64.21987231,5,mg/dL,0.05/6,hu,22716983,-1,Milazzo,2012,Placebo, +Atorvastin,ST9
+15,Luciferase siSRNA,238,15.65247584,5,Angptl3 siRNA,153,22.4,5,mg/dL,0.05/6,ms,32808882,-1,Wu,2020,Nonsense, -Angptl3,F1D
+16,WTD +Saline,463,103,12,WTD +PCSK9-mAb1,254,108,10,mg/dl,0.05,ms,31366894,-1,Schuster,2019,Saline, -PCSK9,F1A
+17,pCMV5,642,63,9,PCMV-E3,283,69,10,mg/dl,0.05,ms,11110410,-1,Rinaldi,2000,pCMV5, -PCMV-E3,F3
+18,ApoE-/- ,300,97,13,ApoE-/- +Palm-E,126,41,14,mg/dl,0.05,ms,11015467,-1,Black,2000,ApoE-/-, +Palm-E,T1
+19,ApoE-/- ,969,219,6,ApoE–/– EC-TFEB ,965,84.6,6,mg/dL,0.05,ms,28143903,0,Lu,2017,ApoE-/-,EC-TFEB ,SF6A
+20,ApoE-/- ,956,181,5,ApoE–/– + CD,770,61.3,4,mg/dL,0.05,ms,27053774,0,Zimmer,2016,ApoE-/- ,CD, F2F
+21,ApoE-/- ,444,109,9,ApoE–/– + Palm Oil,324,88,9,mg/dL,0.05,ms,10521366,0,Calleja,1999,ApoE-/-,Palm,T2
+22,ApoE-/- ,585,131,11,ApoE–/– + SF Oil,598,102,11,mg/dL,0.05/7,ms,10521366,0,Calleja,1999,ApoE-/-,SF Oil,T3
+23,WTD-KO-F,2338,332.4,5,WTD-DKO-F,2040,473.7,10,mg/dL,0.05,ms,29615096,0,Han,2018,ApoE-/-, -CD6(F),T2
+24,Foxp1WTApoE-/- ,1037,634.6,12,Foxp1ECKOApoE–/–,932.5,441.7,12,mg/dL,1,ms,31318658,0,Zhuang,2019,ApoE-/- , -Foxp1,ST1
+25,LDLr-/- WTD -IF,105,27.89,15,LDLr–/– WTD +IF,93.4,29.4,15,mmol/L,3,ms,9614153,0,Kirk,1998,ApoE-/- , +IF,T2
+26,Ldlr-/- FxrWT (M),1888,627.4,13,Ldlr–/– Fxr–/– (M),1988,461.5,13,mg/dL,2,ms,16825595,0,Zhang,2006,Ldlr-/- , -Fxr,F3B
+27,LpL1WT,104,16,8,LpL1–/–,146,34,9,mg/dl,0.05,ms,11790777,0,Yagyu,2002,WT, -LpL1,T1
+28,VLDlr0WT,104,16,8,VLDlr0–/–,141,34,8,mg/dl,0.05,ms,11790777,0,Yagyu,2002,WT, -VLDlr0,T1
+29,C57Bl/6,55.6,15,12,LDLR-/-,195.1,15.6,9,mg/dL,0.05/2,ms,22810096,1,Moreira,2012,WT, -LDLR,F1A
+30,C57Bl/6,86,20,46,ApoE-/-,434,129,40,mg/dL,0.05/3,ms,1411543,1,Zhang,1992,WT, -ApoE,T1
+31,C57Bl/6,86,20,46,ApoE+/-,88,22,47,mg/dL,0.05/3,ms,1411543,0,Zhang,1992,WT, -ApoE,T1
+32,C57Bl/6,119,17,19,LDLR-/-,228,36,16,mg/dL,0.05/3,ms,8349823,1,Ishibashi,1993,WT, -LDLR,T1
+33,C57Bl/6,119,17,19,LDLR+/-,158,25,39,mg/dL,0.05/3,ms,8349823,1,Ishibashi,1993,WT, -LDLR,T1
+34,LDLR-/-,8.7,2.6,12,LDLR-/- HC,21.45,5.2,12,mmol/L,0.05/3,ms,17255537,1,Hartvigsen,2006,LDLR-/-, +HC,F2A
+35,LDLR-/-,8.7,2.6,12,LDLR-/- WD,48.88,7.6,8,mmol/L,0.05/3,ms,17255537,1,Hartvigsen,2006,LDLR-/-, +WD,F2A
