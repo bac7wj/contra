@@ -1,11 +1,14 @@
 
 
 
+if (!require("pacman")) {install.packages("pacman")}; library(pacman)
+# p_load(ggplot2)
+p_load(readr )
+p_load(tidyr)
 
 source("R/contra_plot.R")
 source("R/candidate_stats_from_xlsx.R")
-library(readr )
-library(tidyr)
+
 
 base_dir = "contra_analysis"
 fig_num = "2" 
@@ -24,6 +27,16 @@ conf_ints_list <- t(sapply(1:nrow(df_chol),
                            function(x) norm_confint_dmeans(df_chol$mean_x[x], df_chol$s_x[x], df_chol$n_x[x], 
                                                            df_chol$mean_y[x], df_chol$s_y[x], df_chol$n_y[x],
                                                            conf.level = 0.95, relative = TRUE)))
+
+# conf_ints_list = list()
+# for (n in 1:nrow(df_chol)) {
+#   conf_ints_list[[n]] <- 
+#     norm_confint_dmeans(df_chol$mean_x[n], df_chol$s_x[n], df_chol$n_x[n], 
+#                         df_chol$mean_y[n], df_chol$s_y[n], df_chol$n_y[n],
+#                         conf.level = 0.95, relative = TRUE)
+# } conf_ints_list <- do.call(rbind,conf_ints_list) 
+
+
 df_conf_ints <- as.data.frame(matrix(unlist(conf_ints_list), ncol = ncol(conf_ints_list), 
                                      dimnames = list(NULL, colnames(conf_ints_list))))
 # Contra-plot
@@ -31,9 +44,9 @@ source("R/contra_plot.R")
 df_contra <- cbind(df_chol[c("tx", "ctrl",  "spec", "study")], # "year", "loc")],
                    df_conf_ints[c("estimate", "lower", "upper")])
 contra_plot(df = subset(df_contra, lower < 0 ), sort_colname = "closest", col_x_pos = "auto",
-            xlabel = "Rel. Difference in Means", plot_title = "Total Plasma Cholesterol",
+            xlabel = "Fold Change Product", plot_title = "Total Plasma Cholesterol",
             ggsize = c(3.5, 6.5), fig_path = fig_path, fig_name = "Neg_chol_rel_conf_closer_contra_plot.png",
-            xlims = c(-0.65, 0.45), relative = TRUE, estimate_colname = "closest", estimate_label = "min")
+            xlims = c(-0.65, 0.4), relative = TRUE, estimate_colname = "closest", estimate_label = "min")
 
 contra_plot(df = subset(df_contra, upper > 0 ), sort_colname = "closest", col_x_pos = "auto", 
             xlabel = "Rel. Difference in Means", plot_title = "Total Plasma Cholesterol",

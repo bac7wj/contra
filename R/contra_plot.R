@@ -1,14 +1,17 @@
 
 
-library(ggplot2)
+if (!require("pacman")) {install.packages("pacman")}; library(pacman)
+p_load(ggplot2)
 # library(patchwork)
-library(gridExtra)
-library(grid)
-library(stringr)
-library(cowplot)
+p_load(gridExtra)
+p_load(grid)
+p_load(stringr)
+p_load(cowplot)
 
 
-fc_prod <- function(x) {x[x < 1] = -1/x[x < 1]; return(x)}
+# fc_prod <- function(x) {x<- x+1; x[x < 1] = -1/x[x < 1]; return(x)}
+fc_prod <- function(x) {x[x < 0] = -1/(x[x < 0]+1); return(x)}
+
 
 pretty_number <- function(x, relative) {
   if (relative) {x = x*100}
@@ -74,14 +77,16 @@ norm_confint_dmeans <- function(mean_x, s_x, n_x, mean_y, s_y, n_y,
   dm_bounds <- quantile(dm,  quants) 
   
   # Produce named list of output
-  out <- tibble(estimate = estimate, lower = unname(dm_bounds[1]), upper = unname(dm_bounds[2]), 
+  out <- tibble(estimate = estimate, 
+                lower = unname(dm_bounds[1]), 
+                upper = unname(dm_bounds[2]), 
            lower_quantile = quants[1], upper_quantile = quants[2],
            relative = relative, conf.level = conf.level)
   return(out)
 }
   
 
-fc_prod <- function(x) {x[x < 1] = -1/x[x < 1]; return(x)}
+
 
 
 contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel = "Fold Mean Difference",
@@ -159,7 +164,7 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
   # Add alternating color boxes for readability
   df_plot$color <- rep(c("white", "gray95"), nrow(df_plot))[1:nrow(df_plot)]
 
-  gg_plt <- ggplot(df_plot, aes(x = estimate, y = index, xmin = lower, xmax = upper)) +
+  gg_plt <- ggplot(df_plot, aes(x = fcp_estimate, y = index, xmin = fcp_lower, xmax = fcp_upper)) +
     geom_rect(aes(xmin = -Inf, xmax = Inf, ymin = index-0.5, ymax = index+0.5, fill = color)) +
     geom_pointrange(shape = 22, fill = "black", size = .5, fatten =.5) +
     annotation_custom(grid::textGrob(plot_title, gp = gpar(col = "black", fontsize = 8)),
@@ -169,7 +174,7 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
     # geom_hline(yintercept = div_index, size = .75, alpha = .2) +
     xlab(xlabel) + theme_classic() + 
     scale_y_continuous(expand = c(0, 0), breaks = df_plot$index) +
-    coord_cartesian(ylim = c(0.5, max(df_plot$index) + 1.5), xlim = xlims) +
+    coord_cartesian(ylim = c(0.5, max(df_plot$index) + 1.5))+#, xlim = xlims) +
     # scale_x_continuous(limits = xlims) +
     scale_color_identity() + scale_fill_identity() +
     theme( axis.title.y = element_blank(), #axis.text.y = element_blank(),
@@ -178,6 +183,10 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
           axis.text.x = element_text(size=7),
           plot.margin = unit(c(0,5, 0, 1), "pt"))
   gg_plt
+  
+  # TODO: Convert negative number to fraction
+  x_labs <- ggplot_build(gg_plt)$layout$panel_params[[1]]$x$get_labels()
+  
   
   # Data frame of metadata for contra_plot
   meta_list <- c(estimate_label, colnames(subset( 
