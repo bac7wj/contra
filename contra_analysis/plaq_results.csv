@@ -1,4 +1,4 @@
-study_id,group_x,x_bar,s_x,m,group_y,y_bar,s_y,n,units,alpha_dm,species,pmid,effect,study,year,ctrl,tx,loc
+study_id,group_x,mean_x,s_x,n_x,group_y,mean_y,s_y,n_y,units,alpha_dm,spec,pmid,effect,study,year,ctrl,tx,loc
 1,Saline,48.9,3.3,9,LNA-Control,51.6,5.2,13,%,0.05/3,ms,27137489,0,Ulrich,2016,Saline, +LNA-Ctrl,F1C
 2,ApoE-/-,668500,106700,8,ApoE-/-.Yaa,673300,157300,8,µm2,0.05,ms,33110193,0,Santiago-Raber,2020,ApoE-/-, +Yaa,F1A
 3,Vehicle,365693,125513,14,PF-'2999,358500,157620,15,µm2,0.05/1,ms,30889221,0,Flach,2019,Vehicle, +PF-'2999, F2B
@@ -9,7 +9,7 @@ study_id,group_x,x_bar,s_x,m,group_y,y_bar,s_y,n,units,alpha_dm,species,pmid,eff
 8,Vehicle,304788,113425,4,SC-64258,310284,160647,3,µm2,0.05/3,pg,10571535,0,Nichols,1999,Vechicle, +SC-64258,T2
 9,ApoE-/- -Abx,9956,11578,20,ApoE-/- +Abx,17196,13373,18,µm2,0.05/6,ms,21475195,0,Wang,2011,ApoE-/-, +Abx,F5E
 10,ApoE-/-,0.54,0.12,16,ApoE-/-P2Y1-/-,0.41,0.1161895,15,mm2,0.05,ms,18663083,-1,Hechler,2008,ApoE-/-, -P2Y1,F2B
-11,ApoE-/-,225000,72732,10,ApoE-/- + PAO,161000,47434.1649,10,µm2,0.05,ms,27683551,-1,Çimen,2016,ApoE-/-, +PAO,F5C
+11,ApoE-/-,225000,72732,10,ApoE-/- + PAO,161000,47434.1649,10,µm2,0.05,ms,27683551,-1,Cimen,2016,ApoE-/-, +PAO,F5C
 12,ApoE-/-,21.2,8.083316151,6,ApoE-/-P2Y1-/-,12.4,2.939387691,6,%,0.05,ms,18663083,-1,Hechler,2008,ApoE-/-, -P2Y1,F1A
 13,ApoE-/-,16.1,7.7,10,ApoE-/-EC-TFEB,8.58,3.3,12,%,0.05,ms,28143903,-1,Lu,2017,ApoE-/-, +EC-TFEB,F7F
 14,Vehicle,304788,113425,4,SC-69000,149779,34576,7,µm2,0.05/3,pg,10571535,-1,Nichols,1999,Vehicle, +SC-69000,T2
@@ -18,14 +18,12 @@ study_id,group_x,x_bar,s_x,m,group_y,y_bar,s_y,n,units,alpha_dm,species,pmid,eff
 17,LDLr-/- -IF,7.39,6.7,13,LDLr-/- +IF,2.01,3.4,15,%,0.05,ms,9614153,-1,Kirk,1998,LDLr-/-, +IF,F2B
 18,Vehicle,0.173,0.15,8,Probucol,0.015,0.025455844,8,mm2,0.05/6,rb,24188322,-1,Niimi,2013,Vehicle, +Probucol,F1
 19,Control,0.0386,0.045536798,10,LDLR-/-,0.86,0.281442712,10,mm2,0.05/10,ms,28983592,1,Lv,2017,WT, -LDLR,F1D
-20,Chow,11904,8874.14,4,HFD,859127,210627.8,4,um2,0.05/15,ms,22558236,1,,,,,
+20,Chow,11904,8874.14,4,HFD,859127,210627.8,4,um2,0.05/15,ms,22558236,1,Ma,2012,LDLr-/-, +HFD,F2B
 21,LDLR-/-,461.5,131.9,9,LDLR-/-FbnC1039G+/-,747.3,153.8,9,um2,0.05/4,ms,33796572,1,Wang,2021,LDLr-/-, -FbnC1039G,F4A
-22,LDLR-/-,0.091,0.041,3,PM2.5,0.219,0.056,3,mm2,0.05/4,ms,31935561,1,Zhang,2020,LDLr-/-,PM2.5,F2E
-23,Isotype,189413,99532.68935,10,a-IL-17A,10237,35547.16318,10,um2,0.05,ms,20952673,-1,Ga0,2010,Isotype,a-IL-17A,F5A
+22,LDLR-/-,0.091,0.041,3,PM2.5,0.219,0.056,3,mm2,0.05/4,ms,31935561,1,Zhang,2020,LDLr-/-, +PM2.5,F2E
+23,Isotype,189413,99532.68935,10,a-IL-17A,10237,35547.16318,10,um2,0.05,ms,20952673,-1,Ga0,2010,Isotype, +aIL-17A,F5A
 24,WT,"221,941","64,729",17,CD47-/-,"340,309","194,669",17,um2,0,ms,31337788,1,Engelbertsen,2019,WT, -CD47,F1C
 25,ApoE-/-Fll-/+,906000,351000,10,ApoE-/-,1606000,659000,10,um2,0.05,ms,23409043,1,Borissoff,2013,ApoE-/-, +Fll,F1B
-,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,
+26,LDLR-/-,20.13,2.42,6,LDLR-/-Abcc6-/-,39.3,5.22,7,%,0.05/3,ms,33594095,1,Brampton,2021,LDLr-/-, -Abcc6,F1A
+27,NFD,0.296,0.11,5,HFD,8.33,1.52,3,mm2,0.05/6,ms,26950217,1,Park,2016,NFD, +HFD,F1B
+28,LDLR-/-,640.7,175.7,10,LDLR-/-Creb3l3-/-,854.4,157.5,10,um2,0.05,ms,27417587,1,Park,2016,LDLr-/-, -Creb3l3,F2C

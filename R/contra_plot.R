@@ -8,6 +8,8 @@ library(stringr)
 library(cowplot)
 
 
+fc_prod <- function(x) {x[x < 1] = -1/x[x < 1]; return(x)}
+
 pretty_number <- function(x, relative) {
   if (relative) {x = x*100}
   
@@ -79,11 +81,14 @@ norm_confint_dmeans <- function(mean_x, s_x, n_x, mean_y, s_y, n_y,
 }
   
 
+fc_prod <- function(x) {x[x < 1] = -1/x[x < 1]; return(x)}
+
 
 contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel = "Fold Mean Difference",
                         ggsize = c(3, 6), fig_path = getwd(), fig_name = "contra_plot.png",
                         estimate_label = "est", plot_title = "Measurement", xlims = c(NA,NA),
-                        relative = FALSE, estimate_colname = "estimate", rel_plot_widths = c(0.6,0.4)) {
+                        relative = FALSE, estimate_colname = "estimate", rel_plot_widths = c(0.6,0.4),
+                        null_sort_colname = "estimate") {
   #' @description produces a contra_plot, which visualizes the fold difference 
   #' in means between a control group and experiment group in a series of studies.
   #' 
@@ -107,6 +112,9 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
   effect_sign <- ((sign(df$lower)==1) & (sign(df$upper)==1)) - 
     ((sign(df$lower) == -1) & (sign(df$upper) == -1))
 
+  # Add index colum to df
+  # df$index <- 1:nrow(df)
+  
   # Negative effect size
   df_neg <-  df[effect_sign == -1,]
   df_neg$closest <- df_neg$upper 
@@ -117,17 +125,38 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
   df_pos <-  df[effect_sign ==  1,]
   df_pos$closest <- df_pos$lower 
   
+  # If sort requested, sort each result type and rewrite result index
   if (!is.null(sort_colname)) {
     if (is.null(df[[sort_colname]]) && (sort_colname != "closest") )
-      { stop("Column name for 'sort_colname' argument does not exist")}
+    { stop("Column name for 'sort_colname' argument does not exist")}
+    # dividers between result type
+    div_index = c(0,0)
+    # Sort neative, null, and positive results
     df_neg <- df_neg[order(df_neg[[sort_colname]], decreasing = FALSE),]
-    df_null <- df_null[order(df_null[[sort_colname]], decreasing = FALSE),]
+    df_null <- df_null[order(df_null[[null_sort_colname]], decreasing = FALSE),]
     df_pos <- df_pos[order(df_pos[[sort_colname]], decreasing = FALSE),]
+    
+    df_plot <- rbind(df_neg, df_null, df_pos)
+    df_plot$index <- 1:nrow(df_plot)
+    
+    # Add dividers
+    div_index[1] <- nrow(df_neg) +.5
+    div_index[2] <- nrow(df_neg) + nrow(df_null) +.5
+    # Remove dividers at top or bottom of plot
+    div_index <- div_index[!(div_index == 0.5 | div_index == (nrow(df_plot)+0.5))]
+
+    
+  } else {
+    df_plot <- rbind(df_neg, df_null, df_pos)
   }
-  df_plot <- rbind(df_neg, df_null, df_pos)
   
   
-  df_plot$index <- 1:nrow(df_plot)
+  # Add FCP transformed columns
+  df_plot$fcp_estimate <- fc_prod(df_plot$estimate)
+  df_plot$fcp_lower    <- fc_prod(df_plot$lower)
+  df_plot$fcp_upper    <- fc_prod(df_plot$upper)
+  
+  # Add alternating color boxes for readability
   df_plot$color <- rep(c("white", "gray95"), nrow(df_plot))[1:nrow(df_plot)]
 
   gg_plt <- ggplot(df_plot, aes(x = estimate, y = index, xmin = lower, xmax = upper)) +
@@ -137,62 +166,51 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
                       xmin = -Inf, xmax = Inf,
                       ymin = max(df_plot$index)+1, ymax = max(df_plot$index)+1) +
     annotate("segment", x = 0, y = 0, xend = 0, yend = max(df_plot$index)+0.5) +
+    # geom_hline(yintercept = div_index, size = .75, alpha = .2) +
     xlab(xlabel) + theme_classic() + 
-    scale_y_continuous(expand = c(0, 0)) +
+    scale_y_continuous(expand = c(0, 0), breaks = df_plot$index) +
     coord_cartesian(ylim = c(0.5, max(df_plot$index) + 1.5), xlim = xlims) +
     # scale_x_continuous(limits = xlims) +
     scale_color_identity() + scale_fill_identity() +
-    theme(axis.text.y = element_blank(), axis.title.y = element_blank(),
+    theme( axis.title.y = element_blank(), #axis.text.y = element_blank(),
           axis.line.y = element_blank(), axis.ticks.y=element_blank(),
           axis.title = element_text(size = 7),
           axis.text.x = element_text(size=7),
-          plot.margin = unit(c(0, 0, 0, 1), "pt"))
+          plot.margin = unit(c(0,5, 0, 1), "pt"))
   gg_plt
   
   # Data frame of metadata for contra_plot
   meta_list <- c(estimate_label, colnames(subset( 
-    df_plot, select = -c(estimate, closest, lower,upper, color, index) )))
+    df_plot, select = -c(estimate, closest, lower,upper, color, index,
+                         fcp_lower, fcp_upper, fcp_estimate) )))
   # TODO NEED TO CONTROL WHICH VARIABLE ESTIMATE
   df_meta = cbind(data.frame(estimate = sapply(1:nrow(df_plot), function(x) 
     pretty_number(df_plot[[estimate_colname]][x], relative = relative))),
-                  subset( df_plot, select = -c(lower, upper) ))
+                  subset( df_plot, select = -c(lower, upper, estimate, closest,
+                                               fcp_lower, fcp_upper, fcp_estimate)))
   names(df_meta)[1] <- estimate_label
   
   # Get max Character
-  df_meta[nrow(df_meta) + 1,] <- rep(NA, ncol(df_meta))
-  df_meta$index[nrow(df_meta)] <- nrow(df_meta)
+  df_meta[nrow(df_plot) + 1,] <- rep(NA, ncol(df_meta))
+  df_meta$index[nrow(df_meta)] <- max(df_meta$index+1, na.rm = TRUE)
   # Add column title as last entry to column title
   pretty_hdrs <- paste0("bold(",str_to_title(colnames(df_meta)[1:(ncol(df_meta)-2)]), ")")
   df_meta[nrow(df_meta),1:(ncol(df_meta)-2)] <-
     paste0("bold(",str_to_title(colnames(df_meta)[1:(ncol(df_meta)-2)]), ")")
 
   if (length(col_x_pos)==1 && col_x_pos=="auto") {
-    # max_nchars <- sapply(1:length(meta_list), function(x) 
-    #   max( c(nchar(df_meta[[meta_list[x]]][1:nrow(df_meta)-1]),
-    #         nchar(meta_list[x]))  ) + 5)
-    
+    # Find max length chars for each column (for loop used for debugging multibyte chars)
+    # If apply is used instead of for, we can't see where the error was tripped
     max_nchars = rep(0, length(meta_list))
     for (n in seq_along(meta_list)) {
       max_nchars[n] <- max( c(nchar(df_meta[[meta_list[n]]][1:nrow(df_meta)-1]),
                            nchar(meta_list[n]))  ) + 5
     }
-    
-    
     rel_widths = max_nchars/sum(max_nchars)
     raw_x_pos = cumsum(max_nchars/sum(max_nchars))
     col_x_pos = raw_x_pos - raw_x_pos[1] 
     
-    # col_x_pos[2:(length(rel_widths)-1)] <- col_x_pos[2:(length(rel_widths)-1)] -
-    #   rel_widths[2:(length(rel_widths)-1)]/2
-    # col_x_pos[length(col_x_pos)] = 1.02
-    
-    # col_x_pos = rep(0, length(rel_widths))
-    # col_x_pos[1] = -0.05
-    # for (n in seq(2,length(col_x_pos))) {
-    #   col_x_pos[n] <- rel_widths[n-1]+ rel_widths[n]/2
-    # }
-    
-    col_x_pos[length(col_x_pos)] = 1.02
+    col_x_pos[length(col_x_pos)] = 1.04
     col_x_pos[1]= -0.05
     col_x_pos[length(col_x_pos)-1] = col_x_pos[length(col_x_pos)-1] + 0.02
   }
@@ -202,10 +220,12 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
                   ymin = index - 0.5, 
                   ymax = index + 0.5, fill = color)) +
     geom_hline(yintercept = nrow(df_plot)+0.5, color = "black", size = .5) +
+    geom_hline(yintercept = div_index, color = "black", size = .5, alpha = 0.5) +
     scale_y_continuous(expand = c(0, 0), limits = c(0.5, max(df_plot$index) + 1.5)) +
-    scale_x_continuous(expand = c(0, 0)) + #, limits = c(0,1.02)) +
-    scale_colour_identity() +  scale_fill_identity() + coord_cartesian(clip="off") +
-    xlab("Force This Label White") + theme_classic()+ xlim(0, 1) +
+    # scale_x_continuous(expand = c(0, 0)) + #, limits = c(0,1.02)) 
+    coord_cartesian(clip="off") + xlim(0, 1) +
+    scale_colour_identity() +  scale_fill_identity() + 
+    xlab("Force This Label White") + theme_classic() +  
     theme(axis.text.y = element_blank(), axis.title.y = element_blank(),
           axis.line.y = element_blank(), axis.ticks.y = element_blank(),
           axis.title = element_text(size = 7),
@@ -219,11 +239,11 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
   for (n in seq_along(col_x_pos)) {
     gg_tbl <- gg_tbl + 
       geom_text(x = col_x_pos[n],
-                label = c(df_meta[[meta_list[n]]][1:nrow(df_meta)-1], ""),
+                label = c(df_meta[[meta_list[n]]][1:max(df_meta$index)-1], ""),
                 hjust = 0.5 - as.numeric(n == 1)/2 + as.numeric(n == length(col_x_pos))/2,
-                parse = FALSE, size = 2.5, color = c(rep("black", nrow(df_meta) - 1), "white"))
-    gg_tbl <- gg_tbl + 
-      geom_text(x = col_x_pos[n], label = c(rep("", nrow(df_meta)-1), pretty_hdrs[n]), 
+                parse = FALSE, size = 2.5, color = c(rep("black", max(df_meta$index) - 1), "white"))
+    gg_tbl <- gg_tbl +
+      geom_text(x = col_x_pos[n], label = c(rep("", max(df_meta$index)-1), pretty_hdrs[n]),
                 hjust = 0.5 - as.numeric(n == 1)/2 + as.numeric(n == length(col_x_pos))/2,
                 parse = TRUE, size = 2.5)
   }
