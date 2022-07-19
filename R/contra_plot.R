@@ -9,9 +9,9 @@ p_load(stringr)
 p_load(cowplot)
 
 
-# fc_prod <- function(x) {x<- x+1; x[x < 1] = -1/x[x < 1]; return(x)}
-fc_prod <- function(x) {x[x < 0] = -1/(x[x < 0]+1); return(x)}
-
+# 
+fc_prod <- function(x) {x[x<0] = -1/(x[x<0] + 1); x[x>0] = x[x>0] + 1; return(x)}
+contract_1n1 <- function(x)  {x[x > 0] = x[x > 0] - 1; x[x < 0] = x[x < 0] + 1; return(x)}
 
 pretty_number <- function(x, relative) {
   if (relative) {x = x*100}
@@ -155,11 +155,10 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
     df_plot <- rbind(df_neg, df_null, df_pos)
   }
   
-  
   # Add FCP transformed columns
-  df_plot$fcp_estimate <- fc_prod(df_plot$estimate)
-  df_plot$fcp_lower    <- fc_prod(df_plot$lower)
-  df_plot$fcp_upper    <- fc_prod(df_plot$upper)
+  df_plot$fcp_estimate <- contract_1n1( fc_prod(df_plot$estimate) )
+  df_plot$fcp_lower    <- contract_1n1( fc_prod(df_plot$lower) )
+  df_plot$fcp_upper    <- contract_1n1( fc_prod(df_plot$upper) )
   
   # Add alternating color boxes for readability
   df_plot$color <- rep(c("white", "gray95"), nrow(df_plot))[1:nrow(df_plot)]
@@ -184,9 +183,22 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
           plot.margin = unit(c(0,5, 0, 1), "pt"))
   gg_plt
   
-  # TODO: Convert negative number to fraction
+  # Change xlabels for Fold change product transform
   x_labs <- ggplot_build(gg_plt)$layout$panel_params[[1]]$x$get_labels()
+  zero_ind <- match("0", x_labs)
+  # subtract 1 to xlabels below zero, remove negative sign, add exponent
+  prev_neg_xlabs <- as.character(as.numeric(x_labs[1:zero_ind-1])-1)
+  # new_neg_xlabs <- paste0(sub('.', '', prev_neg_xlabs[1:zero_ind-1]),'^{-1}')
+  # new_neg_xlabs <- paste0("frac(1,",sub('.', '', prev_neg_xlabs[1:zero_ind-1]),")")
+  new_neg_xlabs <- paste0("1/",sub('.', '', prev_neg_xlabs[1:zero_ind-1]))
+  new_zero_pos_xlabs <- as.character(as.numeric(x_labs[zero_ind:length(x_labs)])+1)
   
+  new_xlabs <- c(new_neg_xlabs, new_zero_pos_xlabs)
+
+  gg_plt <- gg_plt + scale_x_continuous(labels = parse(text = new_xlabs))
+  
+  gg_plt
+ 
   
   # Data frame of metadata for contra_plot
   meta_list <- c(estimate_label, colnames(subset( 

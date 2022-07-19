@@ -49,7 +49,7 @@ contra_plot(df = subset(df_contra, lower < 0 ), sort_colname = "closest", col_x_
             xlims = c(-0.65, 0.4), relative = TRUE, estimate_colname = "closest", estimate_label = "min")
 
 contra_plot(df = subset(df_contra, upper > 0 ), sort_colname = "closest", col_x_pos = "auto", 
-            xlabel = "Rel. Difference in Means", plot_title = "Total Plasma Cholesterol",
+            xlabel = "Fold Change Product", plot_title = "Total Plasma Cholesterol",
             ggsize = c(3.5, 6.5), fig_path = fig_path, fig_name = "Pos_chol_rel_conf_closer_contra_plot.png",
             xlims = c(-0.3, 6), relative = TRUE, estimate_colname = "closest", estimate_label = "min")
 
