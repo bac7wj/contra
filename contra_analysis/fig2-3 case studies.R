@@ -20,7 +20,7 @@ dir.create(fig_path, showWarnings = FALSE)
 
 # Cholesterol Dataset
 df_chol <- read_csv(file.path(proj_path, base_dir, "chol_results.csv"))
-
+df_chol$study <- abbreviate(df_chol$study,6)
 
 # Calculate raw confidence Intervals for Difference in means
 conf_ints_list <- t(sapply(1:nrow(df_chol), 
@@ -42,14 +42,14 @@ source("R/contra_plot.R")
 df_contra <- cbind(df_chol[c("tx", "ctrl",  "spec", "study")],
                    df_conf_ints[c("estimate", "lower", "upper")])
 contra_plot(df = subset(df_contra, lower < 0 ), sort_colname = "closest", col_x_pos = "auto",
-            xlabel = "Fold Change Product", plot_title = "Total Plasma Cholesterol",
+            xlabel = "Fold Change Quotient", plot_title = "Total Plasma Cholesterol",
             ggsize = c(3.5, 6.5), fig_path = fig_path, fig_name = "Neg_chol_rel_conf_closer_contra_plot.png",
-            xlims = c(-0.65, 0.4), relative = TRUE, estimate_colname = "closest", estimate_label = "min")
+            fc_xlims = c(-0.6, 0.4), relative = TRUE, estimate_colname = "closest", estimate_label = "min")
 
 contra_plot(df = subset(df_contra, upper > 0 ), sort_colname = "closest", col_x_pos = "auto", 
-            xlabel = "Fold Change Product", plot_title = "Total Plasma Cholesterol",
+            xlabel = "Fold Change Quotient", plot_title = "Total Plasma Cholesterol",
             ggsize = c(3.5, 6.5), fig_path = fig_path, fig_name = "Pos_chol_rel_conf_closer_contra_plot.png",
-            xlims = c(-0.3, 6), relative = TRUE, estimate_colname = "closest", estimate_label = "min")
+            fc_xlims = c(-0.3, 6), relative = TRUE, estimate_colname = "closest", estimate_label = "min")
 
 
 
@@ -67,14 +67,13 @@ source("R/contra_plot.R")
 
 # Cholesterol Dataset
 df_plaq <- read_csv(file.path(proj_path, base_dir, "plaq_results.csv"))
-
+df_plaq$study <- abbreviate(df_plaq$study,6)
 
 # Calculate raw confidence Intervals for Difference in means
 conf_ints_list <- t(sapply(1:nrow(df_plaq),
                            function(x) norm_confint_dmeans(df_plaq$mean_x[x], df_plaq$s_x[x], df_plaq$n_x[x],
                                                            df_plaq$mean_y[x], df_plaq$s_y[x], df_plaq$n_y[x],
                                                            conf.level = 0.95, relative = TRUE)))
-
 # conf_ints_list = list()
 # for (n in 1:nrow(df_plaq)) {
 #   conf_ints_list[[n]] <-
@@ -83,20 +82,18 @@ conf_ints_list <- t(sapply(1:nrow(df_plaq),
 #                         conf.level = 0.95, relative = TRUE)
 # }; conf_ints_list <- do.call(rbind,conf_ints_list)
 
-
-
 df_conf_ints <- as.data.frame(matrix(unlist(conf_ints_list), ncol = ncol(conf_ints_list),
                                      dimnames = list(NULL, colnames(conf_ints_list))))
 # Contra-plot
-df_contra <- cbind(df_plaq[c("study_id", "tx", "ctrl",  "spec", "study")],
+df_contra <- cbind(df_plaq[c("tx", "ctrl",  "spec", "study")],
                    df_conf_ints[c("estimate", "lower", "upper")])
 contra_plot(df = subset(df_contra, lower < 0 ), sort_colname = "closest", col_x_pos = "auto",
-            xlabel = "Rel. Difference in Means", plot_title = "Plaque Area",
+            xlabel = "Fold Change Quotient", plot_title = "Plaque Area",
             ggsize = c(3.5, 6.5), fig_path = fig_path, fig_name = "neg_plaq_rel_conf_closer_contra_plot.png",
-            xlims = c(-0.8, 0.45), relative = TRUE, estimate_colname = "closest", estimate_label = "min")
+            fc_xlims = c(-0.7, 0.45), relative = TRUE, estimate_colname = "closest", estimate_label = "min")
 
 contra_plot(df = subset(df_contra, upper > 0 ), sort_colname = "closest", col_x_pos = "auto",
-            xlabel = "Rel. Difference in Means", plot_title = "Plaque Area",
+            xlabel = "Fold Change Quotient", plot_title = "Plaque Area",
             ggsize = c(3.5, 6.5), fig_path = fig_path, fig_name = "pos_plaq_rel_conf_closer_contra_plot.png",
-            xlims = c(-0.3, 20), relative = TRUE, estimate_colname = "closest", estimate_label = "min")
+            fc_xlims = c(-0.3, 20), relative = TRUE, estimate_colname = "closest", estimate_label = "min")
 

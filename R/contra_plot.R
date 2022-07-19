@@ -8,6 +8,11 @@ p_load(grid)
 p_load(stringr)
 p_load(cowplot)
 
+abbreviate <- function(x, max.length=6) {
+  x[nchar(x) > (max.length)+1] <- paste0(substr(x[nchar(x) > (max.length)+1],0,max.length),".")
+  return(x)
+}
+
 
 
 pretty_number <- function(x, relative) {
@@ -94,7 +99,7 @@ norm_confint_dmeans <- function(mean_x, s_x, n_x, mean_y, s_y, n_y,
 
 contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel = "Fold Mean Difference",
                         ggsize = c(3, 6), fig_path = getwd(), fig_name = "contra_plot.png",
-                        estimate_label = "est", plot_title = "Measurement", xlims = c(NA,NA),
+                        estimate_label = "est", plot_title = "Measurement", fc_xlims = NULL,
                         relative = FALSE, estimate_colname = "estimate", rel_plot_widths = c(0.6,0.4),
                         null_sort_colname = "estimate") {
   #' @description produces a contra_plot, which visualizes the fold difference 
@@ -156,9 +161,6 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
   }
   
   # Transforms to visualize 
-  # fc_prod <- function(x) {x[x<0] = -1/(x[x<0] + 1); x[x>0] = x[x>0] + 1; return(x)}
-  # contract_1n1 <- function(x)  {x[x > 0] = x[x > 0] - 1; x[x < 0] = x[x < 0] + 1; return(x)}
-  
   fc_prod <- function(x) {x[x<0] = -1/(x[x<0] + 1); x[x>0] = x[x>0] + 1; return(x)}
   contract_1n1 <- function(x)  {x[x > 0] = x[x > 0] - 1; x[x < 0] = x[x < 0] + 1; return(x)}
   
@@ -167,27 +169,19 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
   df_plot$fcp_lower    <- contract_1n1( fc_prod(df_plot$lower)    )
   df_plot$fcp_upper    <- contract_1n1( fc_prod(df_plot$upper)    )
   
-  
-  fc_prod(df_plot$estimate[1])
-  fc_prod(df_plot$lower[1])
-  fc_prod(df_plot$upper[1]) 
-  
-  
   # Add alternating color boxes for readability
   df_plot$color <- rep(c("white", "gray95"), nrow(df_plot))[1:nrow(df_plot)]
 
   gg_plt <- ggplot(df_plot, aes(x = fcp_estimate, y = index, xmin = fcp_lower, xmax = fcp_upper)) +
     geom_rect(aes(xmin = -Inf, xmax = Inf, ymin = index-0.5, ymax = index+0.5, fill = color)) +
-    geom_pointrange(shape = 22, fill = "black", size = .5, fatten =.5) +
+    geom_pointrange(shape = 22, fill = "black", size = .5, fatten = .5) +
     annotation_custom(grid::textGrob(plot_title, gp = gpar(col = "black", fontsize = 8)),
                       xmin = -Inf, xmax = Inf,
                       ymin = max(df_plot$index)+1, ymax = max(df_plot$index)+1) +
     annotate("segment", x = 0, y = 0, xend = 0, yend = max(df_plot$index)+0.5) +
-    # geom_hline(yintercept = div_index, size = .75, alpha = .2) +
     xlab(xlabel) + theme_classic() + 
     scale_y_continuous(expand = c(0, 0), breaks = df_plot$index) +
-    coord_cartesian(ylim = c(0.5, max(df_plot$index) + 1.5))+#, xlim = xlims) +
-    # scale_x_continuous(limits = xlims) +
+    coord_cartesian(ylim = c(0.5, max(df_plot$index) + 1.5), xlim = contract_1n1(fc_prod(fc_xlims))) +
     scale_color_identity() + scale_fill_identity() +
     theme( axis.title.y = element_blank(), #axis.text.y = element_blank(),
           axis.line.y = element_blank(), axis.ticks.y=element_blank(),
@@ -198,7 +192,7 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
   
   # Change xlabels for Fold change product transform
   x_labs <- ggplot_build(gg_plt)$layout$panel_params[[1]]$x$get_labels()
-  zero_ind <- match("0", x_labs)
+  zero_ind <- match(0, as.numeric(x_labs))
   # subtract 1 to xlabels below zero, remove negative sign, add exponent
   prev_neg_xlabs <- as.character(as.numeric(x_labs[1:zero_ind-1])-1)
   if (length(prev_neg_xlabs)!=0) {new_neg_xlabs <- paste0("1/",sub('.', '', prev_neg_xlabs))
@@ -259,10 +253,10 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
     theme(axis.text.y = element_blank(), axis.title.y = element_blank(),
           axis.line.y = element_blank(), axis.ticks.y = element_blank(),
           axis.title = element_text(size = 7),
-          axis.title.x = element_text(colour = "white"),
+          # axis.title.x = element_text(colour = "white"),
           axis.line.x.bottom = element_line(color = "white"),
-          axis.ticks.x = element_line(color = "white"),
-          axis.text.x = element_text(size = 7, colour = "white"),
+          # axis.ticks.x = element_line(color = "white"),
+          # axis.text.x = element_text(size = 7, colour = "white"),
           plot.margin = unit(c(0, 0, 0, 0), "null"))
   gg_tbl
   # Fill in metadata columns
@@ -278,6 +272,11 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
                 parse = TRUE, size = 2.5)
   }
   gg_tbl
+  
+  # gg_tbl <- gg_tbl + scale_x_continuous(labels = parse(text = new_xlabs))
+  
+  
+  
   
   # Arrange plot and table side by side
   # plot_grid(gg_plt, gg_tbl, align = "h", ncol = 2, rel_plot_widths = c(.6, .4))
