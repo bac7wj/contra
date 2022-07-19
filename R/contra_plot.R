@@ -9,9 +9,6 @@ p_load(stringr)
 p_load(cowplot)
 
 
-# 
-fc_prod <- function(x) {x[x<0] = -1/(x[x<0] + 1); x[x>0] = x[x>0] + 1; return(x)}
-contract_1n1 <- function(x)  {x[x > 0] = x[x > 0] - 1; x[x < 0] = x[x < 0] + 1; return(x)}
 
 pretty_number <- function(x, relative) {
   if (relative) {x = x*100}
@@ -36,7 +33,7 @@ pretty_number <- function(x, relative) {
 }
 
 norm_confint_dmeans <- function(mean_x, s_x, n_x, mean_y, s_y, n_y, 
-                                conf.level = 0.95, num_param_sims = 250/(1-conf.level), 
+                                conf.level = 0.95, num_param_sims = 500/(1-conf.level), 
                         plot = FALSE, relative = FALSE) {
   #' @description calculate confidence interval of the 95% difference in means 
   #' between group x (control) and group y (experiment) assuming normal 
@@ -65,6 +62,12 @@ norm_confint_dmeans <- function(mean_x, s_x, n_x, mean_y, s_y, n_y,
   mean_x_sims <- rnorm(n = num_param_sims, mean = mean_x, sd = sqrt(s_x^2 / n_x))
   mean_y_sims <- rnorm(n = num_param_sims, mean = mean_y, sd = sqrt(s_y^2 / n_y))
 
+  mean_x_sims[mean_x_sims < 0] = 0
+  mean_y_sims[mean_y_sims < 0] = 0
+  
+  save(list = ls(all.names = TRUE), file = "temp/norm_confint_dmeans.RData", 
+       envir = environment())
+  
   if (!relative) {
     dm <- mean_y_sims - mean_x_sims
     estimate <- mean_y - mean_x
@@ -116,9 +119,6 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
   # Separate results between negative sign, zero, and positive sign
   effect_sign <- ((sign(df$lower)==1) & (sign(df$upper)==1)) - 
     ((sign(df$lower) == -1) & (sign(df$upper) == -1))
-
-  # Add index colum to df
-  # df$index <- 1:nrow(df)
   
   # Negative effect size
   df_neg <-  df[effect_sign == -1,]
@@ -155,10 +155,23 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
     df_plot <- rbind(df_neg, df_null, df_pos)
   }
   
+  # Transforms to visualize 
+  # fc_prod <- function(x) {x[x<0] = -1/(x[x<0] + 1); x[x>0] = x[x>0] + 1; return(x)}
+  # contract_1n1 <- function(x)  {x[x > 0] = x[x > 0] - 1; x[x < 0] = x[x < 0] + 1; return(x)}
+  
+  fc_prod <- function(x) {x[x<0] = -1/(x[x<0] + 1); x[x>0] = x[x>0] + 1; return(x)}
+  contract_1n1 <- function(x)  {x[x > 0] = x[x > 0] - 1; x[x < 0] = x[x < 0] + 1; return(x)}
+  
   # Add FCP transformed columns
   df_plot$fcp_estimate <- contract_1n1( fc_prod(df_plot$estimate) )
-  df_plot$fcp_lower    <- contract_1n1( fc_prod(df_plot$lower) )
-  df_plot$fcp_upper    <- contract_1n1( fc_prod(df_plot$upper) )
+  df_plot$fcp_lower    <- contract_1n1( fc_prod(df_plot$lower)    )
+  df_plot$fcp_upper    <- contract_1n1( fc_prod(df_plot$upper)    )
+  
+  
+  fc_prod(df_plot$estimate[1])
+  fc_prod(df_plot$lower[1])
+  fc_prod(df_plot$upper[1]) 
+  
   
   # Add alternating color boxes for readability
   df_plot$color <- rep(c("white", "gray95"), nrow(df_plot))[1:nrow(df_plot)]
@@ -188,15 +201,11 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
   zero_ind <- match("0", x_labs)
   # subtract 1 to xlabels below zero, remove negative sign, add exponent
   prev_neg_xlabs <- as.character(as.numeric(x_labs[1:zero_ind-1])-1)
-  # new_neg_xlabs <- paste0(sub('.', '', prev_neg_xlabs[1:zero_ind-1]),'^{-1}')
-  # new_neg_xlabs <- paste0("frac(1,",sub('.', '', prev_neg_xlabs[1:zero_ind-1]),")")
-  new_neg_xlabs <- paste0("1/",sub('.', '', prev_neg_xlabs[1:zero_ind-1]))
+  if (length(prev_neg_xlabs)!=0) {new_neg_xlabs <- paste0("1/",sub('.', '', prev_neg_xlabs))
+  } else {new_neg_xlabs=NULL}
   new_zero_pos_xlabs <- as.character(as.numeric(x_labs[zero_ind:length(x_labs)])+1)
-  
   new_xlabs <- c(new_neg_xlabs, new_zero_pos_xlabs)
-
   gg_plt <- gg_plt + scale_x_continuous(labels = parse(text = new_xlabs))
-  
   gg_plt
  
   
