@@ -20,8 +20,8 @@ pretty_number <- function(x, relative) {
   
   if (x==0) { 
     num = "0"
-  } else if (abs(x)>1000) {
-    num <- str_replace(str_replace(str_replace(sprintf("%.1e", x),"e0", "e"), "-0","-"), "\\+0","+")
+  } else if (abs(x)>10000) {
+    num <- str_replace(str_replace(str_replace(sprintf("%.1e", x),"e0", "e"), "-0","-"), "\\+0","")
   } else if (abs(x) >= 100) {
     num <- sprintf("%.0f",x) 
   } else if (abs(x) >= 10) {
@@ -30,8 +30,10 @@ pretty_number <- function(x, relative) {
     num <- sprintf("%.1f", x) 
   } else if (abs(x) >= .1) {
     num <- sprintf("%.2f", x) 
+  }  else if (abs(x) >= .01) {
+      num <- sprintf("%.3f", x) 
   } else {
-    num <- str_replace(str_replace(str_replace(sprintf("%.1e", x),"e0", "e"), "-0","-"), "\\+0","+")
+    num <- str_replace(str_replace(str_replace(sprintf("%.1e", x),"e0", "e"), "-0","-"), "\\+0","")
   }
   if (relative) {num = paste0(num,'%')}
   return(num)
@@ -69,10 +71,7 @@ norm_confint_dmeans <- function(mean_x, s_x, n_x, mean_y, s_y, n_y,
 
   mean_x_sims[mean_x_sims < 0] = 0
   mean_y_sims[mean_y_sims < 0] = 0
-  
-  save(list = ls(all.names = TRUE), file = "temp/norm_confint_dmeans.RData", 
-       envir = environment())
-  
+
   if (!relative) {
     dm <- mean_y_sims - mean_x_sims
     estimate <- mean_y - mean_x
@@ -82,6 +81,11 @@ norm_confint_dmeans <- function(mean_x, s_x, n_x, mean_y, s_y, n_y,
   }
   # Two tail quantiles
   quants = c((1-conf.level)/2, 1-(1-conf.level)/2)
+  if (any(is.nan(dm))) {
+    save(list = ls(all.names = TRUE), file = "temp/norm_confint_dmeans.RData", 
+         envir = environment())
+    stop()
+  }
   dm_bounds <- quantile(dm,  quants) 
   
   # Produce named list of output
@@ -150,8 +154,8 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
     df_plot$index <- 1:nrow(df_plot)
     
     # Add dividers
-    div_index[1] <- nrow(df_neg) +.5
-    div_index[2] <- nrow(df_neg) + nrow(df_null) +.5
+    div_index[1] <- nrow(df_neg) + 0.5
+    div_index[2] <- nrow(df_neg) + nrow(df_null) + 0.5
     # Remove dividers at top or bottom of plot
     div_index <- div_index[!(div_index == 0.5 | div_index == (nrow(df_plot)+0.5))]
 
@@ -161,7 +165,7 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
   }
   
   # Transforms to visualize 
-  fc_prod <- function(x) {x[x<0] = -1/(x[x<0] + 1); x[x>0] = x[x>0] + 1; return(x)}
+  fc_prod <- function(x) {x[x<0] = -1/(x[x < 0] + 1); x[x > 0] = x[x > 0] + 1; return(x)}
   contract_1n1 <- function(x)  {x[x > 0] = x[x > 0] - 1; x[x < 0] = x[x < 0] + 1; return(x)}
   
   # Add FCP transformed columns
@@ -187,7 +191,7 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
           axis.line.y = element_blank(), axis.ticks.y=element_blank(),
           axis.title = element_text(size = 7),
           axis.text.x = element_text(size=7),
-          plot.margin = unit(c(0,5, 0, 1), "pt"))
+          plot.margin = unit(c(0,0, 0, 0), "pt"))
   gg_plt
   
   # Change xlabels for Fold change product transform
@@ -234,12 +238,15 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
     raw_x_pos = cumsum(max_nchars/sum(max_nchars))
     col_x_pos = raw_x_pos - raw_x_pos[1] 
     
-    col_x_pos[length(col_x_pos)] = 1.04
-    col_x_pos[1]= -0.05
+    col_x_pos[length(col_x_pos)] = 1 #1.04
+    col_x_pos[1]= 0  #-0.05
     col_x_pos[length(col_x_pos)-1] = col_x_pos[length(col_x_pos)-1] + 0.02
   }
 
+  df_meta$dummy_x = seq(0.02, 0.98, length.out = nrow(df_meta))
+  
   gg_tbl <- ggplot(data = df_meta, aes(y = index)) +
+    geom_point(aes(x=dummy_x), color = "white") +
     geom_rect(aes(xmin = -Inf, xmax = Inf, 
                   ymin = index - 0.5, 
                   ymax = index + 0.5, fill = color)) +
@@ -247,16 +254,16 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
     geom_hline(yintercept = div_index, color = "black", size = .5, alpha = 0.5) +
     scale_y_continuous(expand = c(0, 0), limits = c(0.5, max(df_plot$index) + 1.5)) +
     # scale_x_continuous(expand = c(0, 0)) + #, limits = c(0,1.02)) 
-    coord_cartesian(clip="off") + xlim(0, 1) +
+    coord_cartesian(clip="off") + #xlim(0, 1) +
     scale_colour_identity() +  scale_fill_identity() + 
-    xlab("Force This Label White") + theme_classic() +  
+    xlab(xlabel) + theme_classic() +  
     theme(axis.text.y = element_blank(), axis.title.y = element_blank(),
           axis.line.y = element_blank(), axis.ticks.y = element_blank(),
           axis.title = element_text(size = 7),
-          # axis.title.x = element_text(colour = "white"),
-          axis.line.x.bottom = element_line(color = "white"),
-          # axis.ticks.x = element_line(color = "white"),
-          # axis.text.x = element_text(size = 7, colour = "white"),
+          axis.title.x = element_text(colour = "white"),
+          # axis.line.x.bottom = element_line(color = "white"),
+          axis.ticks.x = element_line(color = "white"),
+          axis.text.x = element_text(size = 7, color = "white"),
           plot.margin = unit(c(0, 0, 0, 0), "null"))
   gg_tbl
   # Fill in metadata columns
@@ -272,10 +279,15 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
                 parse = TRUE, size = 2.5)
   }
   gg_tbl
-  
-  # gg_tbl <- gg_tbl + scale_x_continuous(labels = parse(text = new_xlabs))
-  
-  
+
+  # If slash is used in tickmarks for plot area, need to add for invisible table 
+  # tick marks so that the spacing is matched.
+  if (length(grep("/",new_xlabs))!=0) {
+    tblx_labs <- ggplot_build(gg_tbl)$layout$panel_params[[1]]$x$get_labels()
+    tblx_labs[2] = paste0(tblx_labs[2],"/2")
+    gg_tbl <- gg_tbl + scale_x_continuous(labels = tblx_labs, limits = c(0,1))
+  }
+  gg_tbl
   
   
   # Arrange plot and table side by side
