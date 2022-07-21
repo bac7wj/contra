@@ -59,9 +59,21 @@ fc_prod <- function(x) {x[x<0] = -1/(x[x < 0] + 1); x[x > 0] = x[x > 0] - 1; ret
 
 
 
-y = c(1.1, 1.25, 1.5, 1.75, 2, 2.5 , 3, 3.5)
-yox = y/1
-ymx = y-1
+
+
+
+
+
+
+y = c(0, .01, .1,.2, .25, .5, .666666, .75, .9, 1, 1.1, 1.25, 1.5, 2, 3, 5, 6, 11, 101)
+
+
+df_comp <- data.frame(x = 1, y=y, ratio_yx = y/1, perc_change = ((y-1)/1) * 100, fc = (y-1)/1)
+
+
+fc_stretch = function(x) {x[x<0]<- 1/(-1-x[x<0]); return(x)}
+df_comp$fc_stretch <- fc_comp_inv(df_comp$fc)
+df_comp
 
 
 

@@ -23,17 +23,17 @@ df_chol <- read_csv(file.path(proj_path, base_dir, "chol_results.csv"))
 df_chol$study <- abbreviate(df_chol$study,6)
 
 # Calculate raw confidence Intervals for Difference in means
-conf_ints_list <- t(sapply(1:nrow(df_chol), 
-                           function(x) norm_confint_dmeans(df_chol$mean_x[x], df_chol$s_x[x], df_chol$n_x[x], 
-                                                           df_chol$mean_y[x], df_chol$s_y[x], df_chol$n_y[x],
-                                                           conf.level = 0.95, relative = TRUE)))
-# conf_ints_list = list()
-# for (n in 1:nrow(df_chol)) {
-#   conf_ints_list[[n]] <- 
-#     norm_confint_dmeans(df_chol$mean_x[n], df_chol$s_x[n], df_chol$n_x[n], 
-#                         df_chol$mean_y[n], df_chol$s_y[n], df_chol$n_y[n],
-#                         conf.level = 0.95, relative = TRUE)
-# } conf_ints_list <- do.call(rbind,conf_ints_list) 
+# conf_ints_list <- t(sapply(1:nrow(df_chol), 
+#                            function(x) norm_confint_dmeans(df_chol$mean_x[x], df_chol$s_x[x], df_chol$n_x[x], 
+#                                                            df_chol$mean_y[x], df_chol$s_y[x], df_chol$n_y[x],
+#                                                            conf.level = 0.95, relative = TRUE)))
+conf_ints_list = list()
+for (n in 1:nrow(df_chol)) {
+  conf_ints_list[[n]] <-
+    norm_confint_dmeans(df_chol$mean_x[n], df_chol$s_x[n], df_chol$n_x[n],
+                        df_chol$mean_y[n], df_chol$s_y[n], df_chol$n_y[n],
+                        conf.level = 0.95, relative = TRUE)
+}; conf_ints_list <- do.call(rbind,conf_ints_list)
 
 df_conf_ints <- as.data.frame(matrix(unlist(conf_ints_list), ncol = ncol(conf_ints_list), 
                                      dimnames = list(NULL, colnames(conf_ints_list))))
@@ -42,14 +42,14 @@ source("R/contra_plot.R")
 df_contra <- cbind(df_chol[c("tx", "ctrl",  "spec", "study")],
                    df_conf_ints[c("estimate", "lower", "upper")])
 contra_plot(df = subset(df_contra, lower < 0 ), sort_colname = "closest", col_x_pos = "auto",
-            xlabel = "Fold Change Quotient", plot_title = "Total Plasma Cholesterol",
+            xlabel = "Stretched Fold Change", plot_title = "Total Plasma Cholesterol",
             ggsize = c(3.5, 6.5), fig_path = fig_path, fig_name = "Chol(-)_rel_conf_closer_contra_plot.png",
-            fc_xlims = c(-0.6, 0.4), relative = TRUE, estimate_colname = "closest", estimate_label = "min")
+            fc_xlims = c(-0.6, 0.4), relative = TRUE, estimate_colname = "closest", estimate_label = 'min')
 
 contra_plot(df = subset(df_contra, upper > 0 ), sort_colname = "closest", col_x_pos = "auto", 
             xlabel = "Fold Change Quotient", plot_title = "Total Plasma Cholesterol",
             ggsize = c(3.5, 6.5), fig_path = fig_path, fig_name = "Chol(+)_rel_conf_closer_contra_plot.png",
-            fc_xlims = c(-0.2, 5), relative = TRUE, estimate_colname = "closest", estimate_label = "min")
+            fc_xlims = c(-0.2, 5), relative = TRUE, estimate_colname = "closest", estimate_label = "min%")
 
 
 

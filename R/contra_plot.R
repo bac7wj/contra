@@ -69,6 +69,7 @@ norm_confint_dmeans <- function(mean_x, s_x, n_x, mean_y, s_y, n_y,
   mean_x_sims <- rnorm(n = num_param_sims, mean = mean_x, sd = sqrt(s_x^2 / n_x))
   mean_y_sims <- rnorm(n = num_param_sims, mean = mean_y, sd = sqrt(s_y^2 / n_y))
 
+  # Truncate all samples to have measurements > 0, since y,x > 0 is assumed
   mean_x_sims[mean_x_sims < 0] = 0
   mean_y_sims[mean_y_sims < 0] = 0
 
@@ -164,18 +165,24 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
     df_plot <- rbind(df_neg, df_null, df_pos)
   }
   
+  # Stretch fold change on the negative x axis scale
+  fc_stretch = function(x)     {x[x<0]<- 1/(-1-x[x<0]); return(x)}
+  fc_stretch_rev = function(x) {x[x<0]<- -(1+x[x<0])/x[x<0]; return(x)}
+  
+  
   # Transforms to visualize 
   fc_prod <- function(x) {x[x<0] = -1/(x[x < 0] + 1);  x[x > 0] = x[x > 0] - 1; return(x)} 
   # contract_1n1 <- function(x)  {x[x > 0] = x[x > 0] - 1; x[x < 0] = x[x < 0] + 1; return(x)}
+  contract_1n1 <- function(x) x
   # Add FCP transformed columns
-  df_plot$fcp_estimate <- contract_1n1( fc_prod(df_plot$estimate) )
-  df_plot$fcp_lower    <- contract_1n1( fc_prod(df_plot$lower)    )
-  df_plot$fcp_upper    <- contract_1n1( fc_prod(df_plot$upper)    )
+  df_plot$fcs_estimate <- fc_stretch(df_plot$estimate)
+  df_plot$fcs_lower    <- fc_stretch(df_plot$lower)
+  df_plot$fcs_upper    <- fc_stretch(df_plot$upper)    
   
   # Add alternating color boxes for readability
   df_plot$color <- rep(c("white", "gray95"), nrow(df_plot))[1:nrow(df_plot)]
 
-  gg_plt <- ggplot(df_plot, aes(x = fcp_estimate, y = index, xmin = fcp_lower, xmax = fcp_upper)) +
+  gg_plt <- ggplot(df_plot, aes(x = fcs_estimate, y = index, xmin = fcs_lower, xmax = fcs_upper)) +
     geom_rect(aes(xmin = -Inf, xmax = Inf, ymin = index-0.5, ymax = index+0.5, fill = color)) +
     geom_pointrange(shape = 22, fill = "black", size = .5, fatten = .5) +
     annotation_custom(grid::textGrob(plot_title, gp = gpar(col = "black", fontsize = 8)),
@@ -209,12 +216,15 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
   # Data frame of metadata for contra_plot
   meta_list <- c(estimate_label, colnames(subset( 
     df_plot, select = -c(estimate, closest, lower,upper, color, index,
-                         fcp_lower, fcp_upper, fcp_estimate) )))
+                         fcs_lower, fcs_upper, fcs_estimate) )))
+  
+  
   # Get column used as estimate
-  df_meta = cbind(data.frame(estimate = sapply(1:nrow(df_plot), function(x) 
-    pretty_number(df_plot[[estimate_colname]][x], relative = relative))),
+  df_estimate <- data.frame(estimate = sapply(1:nrow(df_plot), function(x) 
+    pretty_number(df_plot[[estimate_colname]][x], relative = relative)))
+  df_meta = cbind(df_estimate,
                   subset( df_plot, select = -c(lower, upper, estimate, closest,
-                                               fcp_lower, fcp_upper, fcp_estimate)))
+                                               fcs_lower, fcs_upper, fcs_estimate)))
   names(df_meta)[1] <- estimate_label
   
   # Get max Character
