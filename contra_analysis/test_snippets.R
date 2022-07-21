@@ -71,8 +71,12 @@ y = c(0, .01, .1,.2, .25, .5, .666666, .75, .9, 1, 1.1, 1.25, 1.5, 2, 3, 5, 6, 1
 df_comp <- data.frame(x = 1, y=y, ratio_yx = y/1, perc_change = ((y-1)/1) * 100, fc = (y-1)/1)
 
 
-fc_stretch = function(x) {x[x<0]<- 1/(-1-x[x<0]); return(x)}
-df_comp$fc_stretch <- fc_comp_inv(df_comp$fc)
+fc_stretch = function(x)     {x[x<0]<- 1/(-1-x[x<0]); return(x)}
+fc_stretch_rev = function(x) {x[x<0]<- -(1+x[x<0])/x[x<0]; return(x)}
+
+df_comp$fc_stretch <- fc_stretch(df_comp$fc)
+df_comp$fc_stretch_rev <- fc_stretch_rev(fc_stretch(df_comp$fc))
+
 df_comp
 
 

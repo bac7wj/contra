@@ -171,9 +171,9 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
   
   
   # Transforms to visualize 
-  fc_prod <- function(x) {x[x<0] = -1/(x[x < 0] + 1);  x[x > 0] = x[x > 0] - 1; return(x)} 
-  # contract_1n1 <- function(x)  {x[x > 0] = x[x > 0] - 1; x[x < 0] = x[x < 0] + 1; return(x)}
-  contract_1n1 <- function(x) x
+  # fc_prod <- function(x) {x[x<0] = -1/(x[x < 0] + 1);  x[x > 0] = x[x > 0] - 1; return(x)} 
+  # # contract_1n1 <- function(x)  {x[x > 0] = x[x > 0] - 1; x[x < 0] = x[x < 0] + 1; return(x)}
+  # contract_1n1 <- function(x) x
   # Add FCP transformed columns
   df_plot$fcs_estimate <- fc_stretch(df_plot$estimate)
   df_plot$fcs_lower    <- fc_stretch(df_plot$lower)
@@ -201,16 +201,18 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
   gg_plt
   
   # Change xlabels for Fold change product transform
-  # x_labs <- ggplot_build(gg_plt)$layout$panel_params[[1]]$x$get_labels()
-  # zero_ind <- match(0, as.numeric(x_labs))
-  # # subtract 1 to xlabels below zero, remove negative sign, add exponent
-  # prev_neg_xlabs <- as.character(as.numeric(x_labs[1:zero_ind-1])-1)
+  xlabs <- ggplot_build(gg_plt)$layout$panel_params[[1]]$x$get_labels()
+  neg_ind <- as.numeric(xlabs) < 0
+  # subtract 1 to xlabels below zero, remove negative sign, add exponent
+  
+  prev_neg_xlabs <- as.character(as.numeric(xlabs[neg_ind]))
+  new_neg_xlabs <- paste0("1/",sub('.', '', prev_neg_xlabs))
   # if (length(prev_neg_xlabs)!=0) {new_neg_xlabs <- paste0("1/",sub('.', '', prev_neg_xlabs))
   # } else {new_neg_xlabs=NULL}
-  # new_zero_pos_xlabs <- as.character(as.numeric(x_labs[zero_ind:length(x_labs)])+1)
-  # new_xlabs <- c(new_neg_xlabs, new_zero_pos_xlabs)
-  # gg_plt <- gg_plt + scale_x_continuous(labels = new_xlabs)#, breaks = x_breaks)
-  # gg_plt
+  new_xlabs <- xlabs
+  new_xlabs[neg_ind] <- new_neg_xlabs
+  gg_plt <- gg_plt + scale_x_continuous(labels = new_xlabs)#, breaks = x_breaks)
+  gg_plt
  
   
   # Data frame of metadata for contra_plot
