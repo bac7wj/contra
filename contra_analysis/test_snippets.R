@@ -34,3 +34,40 @@ fc_prod <- function(x0) {
 
 
 fc_prod <- function(x) {x[x < 1] = -1/x[x < 1]; return(x)}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+fc_prod <- function(x) {x[x<0] = -1/(x[x < 0] + 1); x[x > 0] = x[x > 0] - 1; return(x)} 
+
+
+
+
+y = c(1.1, 1.25, 1.5, 1.75, 2, 2.5 , 3, 3.5)
+yox = y/1
+ymx = y-1
+
+
+
+
+# FC 
+# (20-80)/80
+# [1] -0.75
+
+

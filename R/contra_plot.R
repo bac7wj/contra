@@ -165,8 +165,8 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
   }
   
   # Transforms to visualize 
-  fc_prod <- function(x) {x[x<0] = -1/(x[x < 0] + 1); x[x > 0] = x[x > 0] + 1; return(x)}
-  contract_1n1 <- function(x)  {x[x > 0] = x[x > 0] - 1; x[x < 0] = x[x < 0] + 1; return(x)}
+  fc_prod <- function(x) {x[x<0] = -1/(x[x < 0] + 1);  x[x > 0] = x[x > 0] - 1; return(x)} 
+  # contract_1n1 <- function(x)  {x[x > 0] = x[x > 0] - 1; x[x < 0] = x[x < 0] + 1; return(x)}
   # Add FCP transformed columns
   df_plot$fcp_estimate <- contract_1n1( fc_prod(df_plot$estimate) )
   df_plot$fcp_lower    <- contract_1n1( fc_prod(df_plot$lower)    )
@@ -184,7 +184,7 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
     annotate("segment", x = 0, y = 0, xend = 0, yend = max(df_plot$index)+0.5) +
     xlab(xlabel) + theme_classic() + 
     scale_y_continuous(expand = c(0, 0), breaks = df_plot$index) +
-    coord_cartesian(ylim = c(0.5, max(df_plot$index) + 1.5), xlim = contract_1n1(fc_prod(fc_xlims))) +
+    coord_cartesian(ylim = c(0.5, max(df_plot$index) + 1.5)) + #, xlim = contract_1n1(fc_prod(fc_xlims))) +
     scale_color_identity() + scale_fill_identity() +
     theme( axis.title.y = element_blank(),
           axis.line.y = element_blank(), axis.ticks.y=element_blank(),
@@ -194,16 +194,16 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
   gg_plt
   
   # Change xlabels for Fold change product transform
-  x_labs <- ggplot_build(gg_plt)$layout$panel_params[[1]]$x$get_labels()
-  zero_ind <- match(0, as.numeric(x_labs))
-  # subtract 1 to xlabels below zero, remove negative sign, add exponent
-  prev_neg_xlabs <- as.character(as.numeric(x_labs[1:zero_ind-1])-1)
-  if (length(prev_neg_xlabs)!=0) {new_neg_xlabs <- paste0("1/",sub('.', '', prev_neg_xlabs))
-  } else {new_neg_xlabs=NULL}
-  new_zero_pos_xlabs <- as.character(as.numeric(x_labs[zero_ind:length(x_labs)])+1)
-  new_xlabs <- c(new_neg_xlabs, new_zero_pos_xlabs)
-  gg_plt <- gg_plt + scale_x_continuous(labels = new_xlabs)#, breaks = x_breaks)
-  gg_plt
+  # x_labs <- ggplot_build(gg_plt)$layout$panel_params[[1]]$x$get_labels()
+  # zero_ind <- match(0, as.numeric(x_labs))
+  # # subtract 1 to xlabels below zero, remove negative sign, add exponent
+  # prev_neg_xlabs <- as.character(as.numeric(x_labs[1:zero_ind-1])-1)
+  # if (length(prev_neg_xlabs)!=0) {new_neg_xlabs <- paste0("1/",sub('.', '', prev_neg_xlabs))
+  # } else {new_neg_xlabs=NULL}
+  # new_zero_pos_xlabs <- as.character(as.numeric(x_labs[zero_ind:length(x_labs)])+1)
+  # new_xlabs <- c(new_neg_xlabs, new_zero_pos_xlabs)
+  # gg_plt <- gg_plt + scale_x_continuous(labels = new_xlabs)#, breaks = x_breaks)
+  # gg_plt
  
   
   # Data frame of metadata for contra_plot
@@ -278,18 +278,6 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
                 parse = TRUE, size = 2.5)
   }
   gg_tbl
-
-  # # If slash is used in tickmarks for plot area, need to add for invisible table 
-  # # tick marks so that the spacing is matched.
-  # if (length(grep("/",new_xlabs))!=0) {
-  #   tblx_labs <- ggplot_build(gg_tbl)$layout$panel_params[[1]]$x$get_labels()
-  #   no_na_new_xlab = new_xlabs[!is.na(new_xlabs)]
-  #   tblx_labs[1:min(c(length(tblx_labs),length(no_na_new_xlab)))] <- 
-  #     no_na_new_xlab[1:min(c(length(tblx_labs),length(no_na_new_xlab)))]
-  #   tblx_labs[2] = paste0(tblx_labs[2],"/2")
-  #   gg_tbl <- gg_tbl + scale_x_continuous(labels = tblx_labs, limits = c(0,1))
-  # }
-  # gg_tbl
   
   # Arrange plot and table side by side
   # plot_grid(gg_plt, gg_tbl, align = "h", ncol = 2, rel_plot_widths = c(.6, .4))
