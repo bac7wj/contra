@@ -122,9 +122,7 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
   save(list = ls(all.names = TRUE), file = "temp/contra_plot.RData", 
        envir = environment())
   # load(file = "temp/contra_plot.RData")
-  
-  base_font_size = 6
-  xaxis_font_size = 5
+
 
   # Separate results between negative sign, zero, and positive sign
   effect_sign <- ((sign(df$lower)==1) & (sign(df$upper)==1)) - 

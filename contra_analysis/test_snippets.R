@@ -53,35 +53,92 @@ fc_prod <- function(x) {x[x < 1] = -1/x[x < 1]; return(x)}
 
 
 
-
 fc_prod <- function(x) {x[x<0] = -1/(x[x < 0] + 1); x[x > 0] = x[x > 0] - 1; return(x)} 
 
 
 
 
 
-
-
-
-
-
-y = c(0, .01, .1,.2, .25, .5, .666666, .75, .9, 1, 1.1, 1.25, 1.5, 2, 3, 5, 6, 11, 101)
-
-
-df_comp <- data.frame(x = 1, y=y, ratio_yx = y/1, perc_change = ((y-1)/1) * 100, fc = (y-1)/1)
-
-
 fc_stretch = function(x)     {x[x<0]<- 1/(-1-x[x<0]); return(x)}
-fc_stretch_rev = function(x) {x[x<0]<- -(1+x[x<0])/x[x<0]; return(x)}
+fc_stretch_rev = function(x) {x[x<0]<- -1/x[x<0] -1; return(x)}
+
+
+y = c(0, .01, .1,.2, .25, .5, .666666, .75, .9, .99, 1, 1.01, 1.1, 1.25, 1.3333, 1.5, 2, 3, 5, 6, 11, 101)
+
+
+
+
+rc_stretch = function(x)     {x[x<0] <- 1/(-1-x[x<0])+1; return(x)}
+rc_stretch_rev = function(x) {x[x<0] <- -(1/(x[x<0]-1)+1); return(x)}
+
+
+fc_stretch <- function(x) {x[x<1] <- 1/(x[x<1]); return(x)}
+
+
+#                               x   x     x     x   x          
+df_rc = data.frame(pos =  c(0, .01, .1, 0.25, 0.5, .75, 2  , 3  , 4), 
+                   neg = -c(0, .01, .1, 0.25, 0.5/2, .75/2, 1/2, 1/3, 4))
+
+
+
+# Percent increase/decrease, 100% = 2x = double
+df = as.data.frame( matrix(c(
+  0,      0,
+  0.01,   0.01 /2,   # if pos >= 1, neg = 1/(pos+1)
+  0.1,    0.10 /2,
+  0.25,   0.25 /2,
+  0.50,   0.25 /2,
+  0.75,   0.75 /2,   
+  1,      1    /2,      # if pos >= 1, neg = 1/(pos+1)
+  2,      1    /3,
+  3,      1    /4,
+  4,      1    /5,
+  5,      1    /6,
+  10,     1    /11,
+  100,    1    /101
+),  ncol = 2, dimnames = list(c(),c("pos","neg")), byrow = TRUE))
+
+
+
+
+
+# Percent increase/decrease, 100% = 2x = double
+df = as.data.frame( matrix(c(
+  0,      0,
+  0.01,   0.01 /1,   # if pos >= 1, neg = 1/(pos+1)
+  0.1,    0.10 /1,
+  0.25,   0.25 /1,
+  0.50,   0.25 /1,
+  0.75,   0.75 /1,   
+  1,      1    /1,      # if pos >= 1, neg = 1/(pos+1)
+  2,      1    /2,
+  3,      1    /3,
+  4,      1    /4,
+  5,      1    /5,
+  10,     1    /10,
+  100,    1    /100
+),  ncol = 2, dimnames = list(c(),c("pos","neg")), byrow = TRUE))
+
+
+
+
+
+# Fold change: Y/x
+# Relative Change : (Y-X)/X
+
+df_comp <- data.frame(x = 1, y=y, fc = y/1, rc = (y-1)/1)
+
+df_comp$ratio_inv <- ratio_inv(df_comp$ratio)
+df_comp
+
 
 df_comp$fc_stretch <- fc_stretch(df_comp$fc)
 df_comp$fc_stretch_rev <- fc_stretch_rev(fc_stretch(df_comp$fc))
-
 df_comp
 
 
 
-
+-1/.01-1
 # FC 
 # (20-80)/80
 # [1] -0.75
