@@ -82,43 +82,75 @@ df_rc = data.frame(pos =  c(0, .01, .1, 0.25, 0.5, .75, 2  , 3  , 4),
 
 
 # Percent increase/decrease, 100% = 2x = double
+
+# Problem: linearity between + and - not the same
+# Pos: 2x of 1 is 2
+# Neg: 2x of  
 df = as.data.frame( matrix(c(
-  0,      0,
-  0.01,   0.01 /2,   # if pos >= 1, neg = 1/(pos+1)
-  0.1,    0.10 /2,
-  0.25,   0.25 /2,
-  0.50,   0.25 /2,
-  0.75,   0.75 /2,   
-  1,      1    /2,      # if pos >= 1, neg = 1/(pos+1)
-  2,      1    /3,
-  3,      1    /4,
-  4,      1    /5,
-  5,      1    /6,
-  10,     1    /11,
-  100,    1    /101
+  0,      -0,
+  0.01,   -0.01 /2,   # if pos >= 1, neg = 1/(pos+1)
+  0.1,    -0.10 /2,
+  0.25,   -0.50 /2,
+  0.50,   -0.25 /2,
+  0.75,   -0.75 /2,   
+  1,      -1    /2,      # if pos >= 1, neg = 1/(pos+1)
+  2,      -1    /4,
+  3,      -1    /6,
+  4,      -1    /8,
+  5,      -1    /10,
+  10,     -1    /20,
+  100,    -1    /200
 ),  ncol = 2, dimnames = list(c(),c("pos","neg")), byrow = TRUE))
+f_p2n <- function(x)  {x[x<=1] =  -x[x<=1]/2; x[x>1] = -1/(2*x[x>1]); return(x)}
+
+
+# Calcute FC
+# Caculate mirrored fc
+# Map fc values to mirrored FC
 
 
 
+mirror_fc <- function(y,x) sign(y-x)*abs(y-x)/x
+
+# increase decrease
+y = c(c(.9, .8, .75, .5, .2, .1), 0, c(.1, .25, 3, 6, 11))
+
+
+
+
+f_p2n <- function(x) {x = (2*x)^sign(x); return(x)}
+
+
+
+f_p2n <- function(x)  {x <- -min(x,1)/(2*ceiling(x)); return(x);}
+
+
+
+fx <- function(x)  x / (ceiling(x)+1)
 
 
 # Percent increase/decrease, 100% = 2x = double
-df = as.data.frame( matrix(c(
-  0,      0,
-  0.01,   0.01 /1,   # if pos >= 1, neg = 1/(pos+1)
-  0.1,    0.10 /1,
-  0.25,   0.25 /1,
-  0.50,   0.25 /1,
-  0.75,   0.75 /1,   
-  1,      1    /1,      # if pos >= 1, neg = 1/(pos+1)
-  2,      1    /2,
-  3,      1    /3,
-  4,      1    /4,
-  5,      1    /5,
-  10,     1    /10,
-  100,    1    /100
-),  ncol = 2, dimnames = list(c(),c("pos","neg")), byrow = TRUE))
 
+# fx = (y-x) / x
+
+
+
+# pos    neg_val    #neg map
+df = as.data.frame( matrix(c(
+  0,      -0,        0.0,
+  0.01,   -0.01,    -0.01,
+  0.1,    -0.10,    -0.10,
+  0.25,   -0.25,    -0.25,
+  0.50,   -0.50,    -0.5,
+  0.75,   -0.75,    -0.75,
+  1,      -1/1,     -1,
+  2,      -1/2,     -2,
+  3,      -1/3,     -3,
+  4,      -1/4,     -4,
+  5,      -1/5,     -5,
+  10,     -1/10,    -10,
+  100,    -1/100    -100,
+),  ncol = 2, dimnames = list(c(),c("pos","neg")), byrow = TRUE))
 
 
 
