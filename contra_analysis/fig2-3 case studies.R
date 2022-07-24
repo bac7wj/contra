@@ -42,14 +42,14 @@ source("R/contra_plot.R")
 df_contra <- cbind(df_chol[c("tx", "ctrl",  "spec", "study")],
                    df_conf_ints[c("estimate", "lower", "upper")])
 contra_plot(df = subset(df_contra, lower < 0 ), sort_colname = "closest", col_x_pos = "auto",
-            xlabel = "Stretched Fold Change", plot_title = "Total Plasma Cholesterol",
+            xlabel = "Relative Difference in Means", plot_title = "Total Plasma Cholesterol",
             ggsize = c(3.5, 6.5), fig_path = fig_path, fig_name = "Chol(-)_rel_conf_closer_contra_plot.png",
-            fc_xlims = c(-0.6, 0.4), relative = TRUE, estimate_colname = "closest", estimate_label = 'min')
+            tf_xlims = c(-0.6, 0), relative = TRUE, estimate_colname = "closest", estimate_label = '"Lst%"')
 
 contra_plot(df = subset(df_contra, upper > 0 ), sort_colname = "closest", col_x_pos = "auto", 
-            xlabel = "Fold Change Quotient", plot_title = "Total Plasma Cholesterol",
+            xlabel = "Relative Difference in Means", plot_title = "Total Plasma Cholesterol",
             ggsize = c(3.5, 6.5), fig_path = fig_path, fig_name = "Chol(+)_rel_conf_closer_contra_plot.png",
-            fc_xlims = c(-0.2, 5), relative = TRUE, estimate_colname = "closest", estimate_label = "min%")
+            tf_xlims = c(0, 5), relative = TRUE, estimate_colname = "closest", estimate_label = '"Lst%"')
 
 
 
@@ -88,12 +88,12 @@ df_conf_ints <- as.data.frame(matrix(unlist(conf_ints_list), ncol = ncol(conf_in
 df_contra <- cbind(df_plaq[c("tx", "ctrl",  "spec", "study")],
                    df_conf_ints[c("estimate", "lower", "upper")])
 contra_plot(df = subset(df_contra, lower < 0 ), sort_colname = "closest", col_x_pos = "auto",
-            xlabel = "Fold Change Quotient", plot_title = "Plaque Area",
+            xlabel = "Relative Difference in Means", plot_title = "Plaque Area",
             ggsize = c(3.5, 6.5), fig_path = fig_path, fig_name = "Plaq(-)_rel_conf_closer_contra_plot.png",
-            fc_xlims = c(-0.95, 0.45), relative = TRUE, estimate_colname = "closest", estimate_label = "min")
+            tf_xlims = c(-0.95, 0), relative = TRUE, estimate_colname = "closest", estimate_label = '"Lst%"')
 
 contra_plot(df = subset(df_contra, upper > 0 ), sort_colname = "closest", col_x_pos = "auto",
-            xlabel = "Fold Change Quotient", plot_title = "Plaque Area",
+            xlabel = "Relative Difference in Means", plot_title = "Plaque Area",
             ggsize = c(3.5, 6.5), fig_path = fig_path, fig_name = "Plaq(+)_rel_conf_closer_contra_plot.png",
-            fc_xlims = c(-0.3, 20), relative = TRUE, estimate_colname = "closest", estimate_label = "min")
+            tf_xlims = c(0, 20), relative = TRUE, estimate_colname = "closest", estimate_label = '"Lst%"')
 

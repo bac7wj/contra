@@ -104,7 +104,7 @@ norm_confint_dmeans <- function(mean_x, s_x, n_x, mean_y, s_y, n_y,
 
 contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel = "Fold Mean Difference",
                         ggsize = c(3, 6), fig_path = getwd(), fig_name = "contra_plot.png",
-                        estimate_label = "est", plot_title = "Measurement", fc_xlims = NULL,
+                        estimate_label = "est", plot_title = "Measurement", tf_xlims = NULL,
                         relative = FALSE, estimate_colname = "estimate", rel_plot_widths = c(0.6,0.4),
                         null_sort_colname = "estimate") {
   #' @description produces a contra_plot, which visualizes the fold difference 
@@ -122,7 +122,6 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
   save(list = ls(all.names = TRUE), file = "temp/contra_plot.RData", 
        envir = environment())
   # load(file = "temp/contra_plot.RData")
-
 
   # Separate results between negative sign, zero, and positive sign
   effect_sign <- ((sign(df$lower)==1) & (sign(df$upper)==1)) - 
@@ -164,8 +163,8 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
   }
   
   # Stretch fold change on the negative x axis scale
-  fc_stretch = function(x)     {x[x<0]<- 1/(-1-x[x<0]); return(x)}
-  fc_stretch_rev = function(x) {x[x<0]<- -(1+x[x<0])/x[x<0]; return(x)}
+  tf_function = function(x) {return(x)}
+  # fc_stretch_rev = function(x) {x[x<0]<- -(1+x[x<0])/x[x<0]; return(x)}
   
   
   # Transforms to visualize 
@@ -173,14 +172,14 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
   # # contract_1n1 <- function(x)  {x[x > 0] = x[x > 0] - 1; x[x < 0] = x[x < 0] + 1; return(x)}
   # contract_1n1 <- function(x) x
   # Add FCP transformed columns
-  df_plot$fcs_estimate <- fc_stretch(df_plot$estimate)
-  df_plot$fcs_lower    <- fc_stretch(df_plot$lower)
-  df_plot$fcs_upper    <- fc_stretch(df_plot$upper)    
+  df_plot$tf_estimate <- tf_function(df_plot$estimate)
+  df_plot$tf_lower    <- tf_function(df_plot$lower)
+  df_plot$tf_upper    <- tf_function(df_plot$upper)    
   
   # Add alternating color boxes for readability
   df_plot$color <- rep(c("white", "gray95"), nrow(df_plot))[1:nrow(df_plot)]
 
-  gg_plt <- ggplot(df_plot, aes(x = fcs_estimate, y = index, xmin = fcs_lower, xmax = fcs_upper)) +
+  gg_plt <- ggplot(df_plot, aes(x = tf_estimate, y = index, xmin = tf_lower, xmax = tf_upper)) +
     geom_rect(aes(xmin = -Inf, xmax = Inf, ymin = index-0.5, ymax = index+0.5, fill = color)) +
     geom_pointrange(shape = 22, fill = "black", size = .5, fatten = .5) +
     annotation_custom(grid::textGrob(plot_title, gp = gpar(col = "black", fontsize = 8)),
@@ -189,7 +188,7 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
     annotate("segment", x = 0, y = 0, xend = 0, yend = max(df_plot$index)+0.5) +
     xlab(xlabel) + theme_classic() + 
     scale_y_continuous(expand = c(0, 0), breaks = df_plot$index) +
-    coord_cartesian(ylim = c(0.5, max(df_plot$index) + 1.5)) + #, xlim = contract_1n1(fc_prod(fc_xlims))) +
+    coord_cartesian(ylim = c(0.5, max(df_plot$index) + 1.5),xlim = tf_function(tf_xlims)) +
     scale_color_identity() + scale_fill_identity() +
     theme( axis.title.y = element_blank(),
           axis.line.y = element_blank(), axis.ticks.y=element_blank(),
@@ -198,33 +197,30 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
           plot.margin = unit(c(0,0, 0, 0), "pt"))
   gg_plt
   
-  # Change xlabels for Fold change product transform
-  xlabs <- ggplot_build(gg_plt)$layout$panel_params[[1]]$x$get_labels()
-  neg_ind <- as.numeric(xlabs) < 0
-  # subtract 1 to xlabels below zero, remove negative sign, add exponent
-  
-  prev_neg_xlabs <- as.character(as.numeric(xlabs[neg_ind]))
-  new_neg_xlabs <- paste0("1/",sub('.', '', prev_neg_xlabs))
-  # if (length(prev_neg_xlabs)!=0) {new_neg_xlabs <- paste0("1/",sub('.', '', prev_neg_xlabs))
-  # } else {new_neg_xlabs=NULL}
-  new_xlabs <- xlabs
-  new_xlabs[neg_ind] <- new_neg_xlabs
-  gg_plt <- gg_plt + scale_x_continuous(labels = new_xlabs)#, breaks = x_breaks)
-  gg_plt
+  # # Change xlabels for Fold change product transform
+  # xlabs <- ggplot_build(gg_plt)$layout$panel_params[[1]]$x$get_labels()
+  # xlabs <- xlabs[!is.na(xlabs)]
+  # xbreaks <- ggplot_build(gg_plt)$layout$panel_params[[1]]$x$get_breaks()
+  # xbreaks <- xbreaks[!is.na(xbreaks)]
+  # neg_ind <- xbreaks < 0
+  # prev_neg_xlabs <- as.character(as.numeric(xlabs[neg_ind]))
+  # new_neg_xlabs <- paste0("1/",sub('.', '', prev_neg_xlabs))
+  # new_xlabs <- xlabs
+  # new_xlabs[neg_ind] <- new_neg_xlabs
+  # gg_plt <- gg_plt + scale_x_continuous(labels = new_xlabs, breaks = x_breaks)
+  # gg_plt
  
-  
   # Data frame of metadata for contra_plot
   meta_list <- c(estimate_label, colnames(subset( 
     df_plot, select = -c(estimate, closest, lower,upper, color, index,
-                         fcs_lower, fcs_upper, fcs_estimate) )))
-  
-  
+                         tf_lower, tf_upper, tf_estimate) )))
+
   # Get column used as estimate
   df_estimate <- data.frame(estimate = sapply(1:nrow(df_plot), function(x) 
     pretty_number(df_plot[[estimate_colname]][x], relative = relative)))
   df_meta = cbind(df_estimate,
                   subset( df_plot, select = -c(lower, upper, estimate, closest,
-                                               fcs_lower, fcs_upper, fcs_estimate)))
+                                               tf_lower, tf_upper, tf_estimate)))
   names(df_meta)[1] <- estimate_label
   
   # Get max Character
