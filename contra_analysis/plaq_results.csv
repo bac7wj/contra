@@ -1,4 +1,4 @@
-study_id,group_x,mean_x,s_x,n_x,group_y,mean_y,s_y,n_y,units,alpha_dm,spec,pmid,effect,study,year,ctrl,tx,loc
+study_id,group_x,mean_x,s_x,n_x,group_y,mean_y,s_y,n_y,units,alpha_dm,sp,pmid,effect,study,year,ctrl,tx,loc
 1,Saline,48.9,3.3,9,LNA-Control,51.6,5.2,13,%,0.05/3,ms,27137489,0,Ulrich,2016,Saline, +LNA-Ctrl,F1C
 2,ApoE-/-,668500,106700,8,ApoE-/-.Yaa,673300,157300,8,µm2,0.05,ms,33110193,0,Santiago-Raber,2020,ApoE-/-, +Yaa,F1A
 3,Vehicle,365693,125513,14,PF-'2999,358500,157620,15,µm2,0.05/1,ms,30889221,0,Flach,2019,Vehicle, +PF-'2999, F2B

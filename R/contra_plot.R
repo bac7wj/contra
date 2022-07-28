@@ -35,8 +35,13 @@ pretty_number <- function(x, relative) {
   } else {
     num <- str_replace(str_replace(str_replace(sprintf("%.1e", x),"e0", "e"), "-0","-"), "\\+0","")
   }
-  if (relative) {num = paste0(num,'%')}
+  # if (relative) {num = paste0(num,'%')}
   return(num)
+}
+
+pretty_numbers <- function(x,relative) {
+  x <- sapply(1:length(x), function(n) pretty_number(x[n], relative = relative))
+  return(x)
 }
 
 norm_confint_dmeans <- function(mean_x, s_x, n_x, mean_y, s_y, n_y, 
@@ -106,7 +111,8 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
                         ggsize = c(3, 6), fig_path = getwd(), fig_name = "contra_plot.png",
                         estimate_label = "est", plot_title = "Measurement", tf_xlims = NULL,
                         relative = FALSE, estimate_colname = "estimate", rel_plot_widths = c(0.6,0.4),
-                        null_sort_colname = "estimate") {
+                        null_sort_colname = "estimate", cum_col_x_pos_adj = rep(0,ncol(df)-3),
+                        pretty_cols = c()) {
   #' @description produces a contra_plot, which visualizes the fold difference 
   #' in means between a control group and experiment group in a series of studies.
   #' 
@@ -194,6 +200,7 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
           axis.line.y = element_blank(), axis.ticks.y=element_blank(),
           axis.title = element_text(size = 7),
           axis.text.x = element_text(size = 7),
+          axis.text.y = element_text(size = 7),
           plot.margin = unit(c(0,0, 0, 0), "pt"))
   gg_plt
   
@@ -223,6 +230,13 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
                                                tf_lower, tf_upper, tf_estimate)))
   names(df_meta)[1] <- estimate_label
   
+  # Pretty print columsn specified
+  for (n in seq_along(pretty_cols)) {
+    df_meta[[pretty_cols[n]]] <- pretty_numbers(df_meta[[pretty_cols[n]]], relative = FALSE)
+  }
+  
+  
+  
   # Get max Character
   df_meta[nrow(df_plot) + 1,] <- rep(NA, ncol(df_meta))
   df_meta$index[nrow(df_meta)] <- max(df_meta$index+1, na.rm = TRUE)
@@ -243,9 +257,12 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
     raw_x_pos = cumsum(max_nchars/sum(max_nchars))
     col_x_pos = raw_x_pos - raw_x_pos[1] 
     
+    col_x_pos = col_x_pos + cumsum(cum_col_x_pos_adj)
+    
     col_x_pos[length(col_x_pos)] = 1 #1.04
     col_x_pos[1]= 0  #-0.05
     col_x_pos[length(col_x_pos)-1] = col_x_pos[length(col_x_pos)-1] + 0.02
+    
   }
 
   df_meta$dummy_x = seq(0.02, 0.98, length.out = nrow(df_meta))
@@ -277,11 +294,11 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
       geom_text(x = col_x_pos[n],
                 label = c(df_meta[[meta_list[n]]][1:max(df_meta$index)-1], ""),
                 hjust = 0.5 - as.numeric(n == 1)/2 + as.numeric(n == length(col_x_pos))/2,
-                parse = FALSE, size = 2.5, color = c(rep("black", max(df_meta$index) - 1), "white"))
+                parse = FALSE, size = 2.2, color = c(rep("black", max(df_meta$index) - 1), "white"))
     gg_tbl <- gg_tbl +
       geom_text(x = col_x_pos[n], label = c(rep("", max(df_meta$index)-1), pretty_hdrs[n]),
                 hjust = 0.5 - as.numeric(n == 1)/2 + as.numeric(n == length(col_x_pos))/2,
-                parse = TRUE, size = 2.5)
+                parse = TRUE, size = 2.2)
   }
   gg_tbl
   

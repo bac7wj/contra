@@ -1,4 +1,4 @@
-study_id,group_x,mean_x,s_x,n_x,group_y,mean_y,s_y,n_y,units,alpha_dm,spec,pmid,effect,study,year,ctrl,tx,loc
+study_id,group_x,mean_x,s_x,n_x,group_y,mean_y,s_y,n_y,units,alpha_dm,sp,pmid,effect,study,year,ctrl,tx,loc
 1,Alfp-cre,3.45,0.24,6,Alfp-creTR?fl/fl,3.26,0.22,6,mmol/L,0.05,ms,24797634,0,Billion,2014,Alfp-cre, -TRBL,F1C
 2,ApoE-/-CD6WT,1251,161,10,ApoE-/-CD6-/-,1179,143,5,mg/dl,0.05,ms,29615096,0,Han,2018,ApoE-/-, -CD6,T1
 3,Cyp17AWT (F),2.29,0.53,7,Cyp17A-/-  (F),2.3,0.32,6,mmol/L,0.05,ms,32472014,0,Aherrahrou,2020,WT, -Cyp17A,T2
