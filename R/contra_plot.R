@@ -116,7 +116,7 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
   #' @description produces a contra_plot, which visualizes the fold difference 
   #' in means between a control group and experiment group in a series of studies.
   #' 
-  #' @param df: dataframe that contains metadata for plot, must include the 
+  #' @param df dataframe that contains metadata for plot, must include the 
   #' columns c(estimate, lower, upper) and then at least one column of metadata 
   #' that is to be reproduced as a table in the plot
   #' @param sort_colname: specifies which column to sort the dataframe by, if any (NULL 
@@ -193,7 +193,7 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
                       ymin = max(df_plot$index)+1, ymax = max(df_plot$index)+1) +
     annotate("segment", x = 0, y = 0, xend = 0, yend = max(df_plot$index)+0.5) +
     xlab(xlabel) + theme_classic() + 
-    scale_y_continuous(expand = c(0, 0), breaks = df_plot$index) +
+    scale_y_continuous(expand = c(0, 0), labels = c(df_plot$study_id,"ID"), breaks = c(df_plot$index,max(df_plot$index)+1)) +
     coord_cartesian(ylim = c(0.5, max(df_plot$index) + 1.5),xlim = tf_function(tf_xlims)) +
     scale_color_identity() + scale_fill_identity() +
     theme( axis.title.y = element_blank(),
@@ -220,14 +220,15 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
   # Data frame of metadata for contra_plot
   meta_list <- c(estimate_label, colnames(subset( 
     df_plot, select = -c(estimate, closest, lower,upper, color, index,
-                         tf_lower, tf_upper, tf_estimate) )))
+                         tf_lower, tf_upper, tf_estimate, study_id) )))
 
   # Get column used as estimate
   df_estimate <- data.frame(estimate = sapply(1:nrow(df_plot), function(x) 
     pretty_number(df_plot[[estimate_colname]][x], relative = relative)))
   df_meta = cbind(df_estimate,
                   subset( df_plot, select = -c(lower, upper, estimate, closest,
-                                               tf_lower, tf_upper, tf_estimate)))
+                                               tf_lower, tf_upper, tf_estimate,
+                                               study_id)))
   names(df_meta)[1] <- estimate_label
   
   # Pretty print columsn specified
@@ -309,6 +310,11 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
            gg_grid_plot, dpi = 600, base_height = ggsize[1], 
            base_width = ggsize[2])
  
+  # Export table
+  # Remove extentions
+  
+  # Export table with certain columns removed
+  
 }
 
 

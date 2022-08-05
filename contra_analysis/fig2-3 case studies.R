@@ -18,7 +18,11 @@ dir.create(fig_path, showWarnings = FALSE)
 
 
 
-# Cholesterol Dataset
+
+
+## Cholesterol Dataset
+#---------------------------------------------------------------------------
+
 df_chol <- read_csv(file.path(proj_path, base_dir, "chol_results.csv"))
 df_chol$study <- abbreviate(df_chol$study,6)
 df_chol$ICV <- df_chol$mean_x /(df_chol$s_x/sqrt(df_chol$n_x))
@@ -41,7 +45,7 @@ df_conf_ints <- as.data.frame(matrix(unlist(bound_conf_ints), ncol = ncol(bound_
                                      dimnames = list(NULL, colnames(bound_conf_ints))))
 # Contra-plot
 source("R/contra_plot.R")
-df_contra <- cbind(df_chol[c("ctrl", "tx", "sp", "year", "study")],
+df_contra <- cbind(df_chol[c("study_id", "ctrl", "tx", "sp", "year", "study")],
                    df_conf_ints[c("estimate", "lower", "upper")])
 contra_plot(df = subset(df_contra, lower < 0 ), sort_colname = "closest", col_x_pos = "auto",
             xlabel = "Relative Difference in Means", plot_title = "Total Plasma Cholesterol",
@@ -85,7 +89,7 @@ for (n in 1:nrow(df_plaq)) {
 df_conf_ints <- as.data.frame(matrix(unlist(conf_ints_list), ncol = ncol(conf_ints_list),
                                      dimnames = list(NULL, colnames(conf_ints_list))))
 # Contra-plot
-df_contra <- cbind(df_plaq[c("ctrl", "tx", "sp", "year", "study")],
+df_contra <- cbind(df_plaq[c("study_id","ctrl", "tx", "sp", "year", "study")],
                    df_conf_ints[c("estimate", "lower", "upper")])
 contra_plot(df = subset(df_contra, lower < 0 ), sort_colname = "closest", col_x_pos = "auto",
             xlabel = "Relative Difference in Means", plot_title = "Plaque Area",
