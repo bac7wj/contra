@@ -1,4 +1,4 @@
-id,study,year,group_x,mean_x,s_x,n_x,group_y,mean_y,s_y,n_y,units,alpha_dm,sp,pmid,effect,ctrl,tx,loc
+study_id,study,year,group_x,mean_x,s_x,n_x,group_y,mean_y,s_y,n_y,units,alpha_dm,sp,pmid,effect,ctrl,tx,loc
 1,Billion,2014,Alfp-cre,3.45,0.24,6,Alfp-creTR?fl/fl,3.26,0.22,6,mmol/L,0.05,ms,24797634,0,Alfp-cre, -TRBL,F1C
 2,Han,2018,ApoE-/-CD6WT,1251,161,10,ApoE-/-CD6-/-,1179,143,5,mg/dl,0.05,ms,29615096,0,ApoE-/-, -CD6,T1
 3,Aherrahrou,2020,Cyp17AWT (F),2.29,0.53,7,Cyp17A-/-  (F),2.3,0.32,6,mmol/L,0.05,ms,32472014,0,WT, -Cyp17A,T2
@@ -22,9 +22,9 @@ id,study,year,group_x,mean_x,s_x,n_x,group_y,mean_y,s_y,n_y,units,alpha_dm,sp,pm
 21,Calleja,1999,ApoE-/- ,444,109,9,ApoE–/– + Palm Oil,324,88,9,mg/dL,0.05,ms,10521366,0,ApoE-/-,Palm,T2
 22,Calleja,1999,ApoE-/- ,585,131,11,ApoE–/– + SF Oil,598,102,11,mg/dL,0.05/7,ms,10521366,0,ApoE-/-,SF Oil,T3
 23,Han,2018,WTD-KO-F,2338,332.4,5,WTD-DKO-F,2040,473.7,10,mg/dL,0.05,ms,29615096,0,ApoE-/-, -CD6(F),T2
-24,Zhuang,2019,Foxp1WTApoE-/- ,1037,634.6,12,Foxp1ECKOApoE–/–,932.5,441.7,12,mg/dL,1,ms,31318658,0,ApoE-/- , -Foxp1,ST1
-25,Kirk,1998,LDLr-/- WTD -IF,105,27.89,15,LDLr–/– WTD +IF,93.4,29.4,15,mmol/L,3,ms,9614153,0,ApoE-/- , +IF,T2
-26,Zhang,2006,Ldlr-/- FxrWT (M),1888,627.4,13,Ldlr–/– Fxr–/– (M),1988,461.5,13,mg/dL,2,ms,16825595,0,Ldlr-/- , -Fxr,F3B
+24,Zhuang,2019,Foxp1WTApoE-/- ,1037,634.6,12,Foxp1ECKOApoE–/–,932.5,441.7,12,mg/dL,0.05,ms,31318658,0,ApoE-/- , -Foxp1,ST1
+25,Kirk,1998,LDLr-/- WTD -IF,105,27.89,15,LDLr–/– WTD +IF,93.4,29.4,15,mmol/L,0.05/3,ms,9614153,0,ApoE-/- , +IF,T2
+26,Zhang,2006,Ldlr-/- FxrWT (M),1888,627.4,13,Ldlr–/– Fxr–/– (M),1988,461.5,13,mg/dL,0.05/2,ms,16825595,0,Ldlr-/- , -Fxr,F3B
 27,Yagyu,2002,LpL1WT,104,16,8,LpL1–/–,146,34,9,mg/dl,0.05,ms,11790777,0,WT, -LpL1,T1
 28,Yagyu,2002,VLDlr0WT,104,16,8,VLDlr0–/–,141,34,8,mg/dl,0.05,ms,11790777,0,WT, -VLDlr0,T1
 29,Moreira,2012,C57Bl/6,55.6,15,12,LDLR-/-,195.1,15.6,9,mg/dL,0.05/2,ms,22810096,1,WT, -LDLR,F1A

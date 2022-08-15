@@ -8,11 +8,11 @@ p_load(grid)
 p_load(stringr)
 p_load(cowplot)
 
+
 abbreviate <- function(x, max.length=6) {
   x[nchar(x) > (max.length)+1] <- paste0(substr(x[nchar(x) > (max.length)+1],0,max.length),".")
   return(x)
 }
-
 
 
 pretty_number <- function(x, relative) {
@@ -39,12 +39,111 @@ pretty_number <- function(x, relative) {
   return(num)
 }
 
+
 pretty_numbers <- function(x,relative) {
   x <- sapply(1:length(x), function(n) pretty_number(x[n], relative = relative))
   return(x)
 }
 
-norm_confint_dmeans <- function(mean_x, s_x, n_x, mean_y, s_y, n_y, 
+
+norm_credint_dm <-
+  function(mean_x, s_x, n_x, mean_y, s_y, n_y, conf.level = 0.95, 
+           num_param_sims = 250/(1-conf.level), sharedVar = FALSE, 
+           relative = FALSE, rand.seed = NA) {
+    
+    save(list = ls(all.names = TRUE), file = "temp/norm_credint_dm.RData", 
+         envir = environment())
+    # load(file = "temp/norm_credint_dm.RData")
+    
+    
+    # x control group
+    # y experiment group
+    if (!is.na(rand.seed)) {set.seed(rand.seed)}
+    if(sharedVar){
+      shape <- .5*(n_x + n_y - 2)
+      scale <- .5*((n_x - 1)*s_x^2 + (n_y - 1) * s_y^2)
+      ssSims <- 1/rgamma(num_param_sims, shape = shape, rate = scale)
+      mux_sims <- rnorm(n = num_param_sims, mean = mean_x, sd = sqrt(ssSims/n_x))
+      muy_sims <- rnorm(n = num_param_sims, mean = mean_y, sd = sqrt(ssSims/n_y))
+    }else{ # different variances
+      shape1 <- .5*(n_x - 1)
+      scale1 <- .5*(n_x - 1) * s_x^2
+      shape2 <- .5*(n_y - 1)
+      scale2 <- .5*(n_y - 1) * s_y^2
+      ss1Sims <- 1/rgamma(n = num_param_sims, shape = shape1, rate = scale1)
+      ss2Sims <- 1/rgamma(n = num_param_sims, shape = shape2, rate = scale2)
+      mux_sims  <- rnorm(n = num_param_sims, mean = mean_x, sd = sqrt(ss1Sims / n_x))
+      muy_sims <- rnorm(n = num_param_sims, mean = mean_y, sd = sqrt(ss2Sims / n_y))
+    }
+    
+    if (!relative) {
+      dm <- muy_sims - mux_sims
+      estimate <- mean_y - mean_x
+    } else {
+      dm <- (muy_sims - mux_sims)/mux_sims
+      estimate <- (mean_y - mean_x)/ mean_x
+    }
+    quants <- c((1-conf.level)/2,1 - (1-conf.level)/2)
+    dm_bounds <- quantile(dm,  quants, type = 1) 
+    
+    # Produce named list of output
+    out <- tibble(estimate = estimate, 
+                  lower = unname(dm_bounds[1]), 
+                  upper = unname(dm_bounds[2]), 
+                  lower_quantile = quants[1], upper_quantile = quants[2],
+                  relative = relative, conf.level = conf.level)
+    
+    
+    return(out)
+  }
+
+
+
+rnorm_confint_dm <- function(mean_x, sd_x, n_x, mean_y, sd_y, n_y, conf.level = 0.95, 
+                       verbose = FALSE,  var.equal = FALSE, method = "fieller")  {
+  #' @description Calculates the relative most difference in means assuming with
+  #' rmdm = mdm/X, X being the control group and Y the experimental
+  #' 
+  #' @param xn_x vector of measurements in control group
+  #' @param y_y vector of measurements in experimental group
+  #' @param conf.level significance level for calculating upper mdm
+  #' 
+  #' @return relative most difference in means
+  
+  # Equation for pooled variance taken from:
+  # https://sphweb.bumc.bu.edu/otlt/mph-modules/bs/bs704_confidence_intervals/bs704_confidence_intervals5.html
+  
+  # Calculate basic sample statistics
+  se_x = sd_x/sqrt(n_x)
+  se_y = sd_y/sqrt(n_y)
+  
+  mean_dm = (mean_y - mean_x)/mean_x
+  df <- n_x + n_y - 2
+  
+  # sSquared <- (sum((x - mean_x)^2) + sum((y - mean_y)^2))/df
+  sSquared <- ((n_x-1)*sd_x^2 + (n_y-1)*sd_y^2)/df
+  
+  
+  fieller_int <- tryCatch(get_FiellerInterval(mean_x, mean_y, sSquared, 
+                                              1/n_x, 1/n_y, df, v12 = 0, alpha=1-conf.level), 
+                          error = function(c) data.frame(upper = NaN, lower = NaN))
+  
+  rmdm <- max(abs(c(fieller_int$lower,fieller_int$upper)))
+  
+  # Produce named list of output
+  out <- tibble(estimate = mean_dm, 
+                lower = fieller_int$lower, 
+                upper = fieller_int$upper, 
+                lower_quantile = (1-conf.level)/2, upper_quantile = 1-(1-conf.level)/2,
+                relative = "TRUE", conf.level = conf.level)
+  
+  return(rmdm)
+}
+
+
+
+
+norm_confint_dm <- function(mean_x, s_x, n_x, mean_y, s_y, n_y, 
                                 conf.level = 0.95, num_param_sims = 500/(1-conf.level), 
                         plot = FALSE, relative = FALSE) {
   #' @description calculate confidence interval of the 95% difference in means 
@@ -104,15 +203,12 @@ norm_confint_dmeans <- function(mean_x, s_x, n_x, mean_y, s_y, n_y,
 }
   
 
-
-
-
 contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel = "Fold Mean Difference",
                         ggsize = c(3, 6), fig_path = getwd(), fig_name = "contra_plot.png",
                         estimate_label = "est", plot_title = "Measurement", tf_xlims = NULL,
                         relative = FALSE, estimate_colname = "estimate", rel_plot_widths = c(0.6,0.4),
                         null_sort_colname = "estimate", cum_col_x_pos_adj = rep(0,ncol(df)-3),
-                        pretty_cols = c()) {
+                        pretty_cols = c(), threshold = NULL) {
   #' @description produces a contra_plot, which visualizes the fold difference 
   #' in means between a control group and experiment group in a series of studies.
   #' 
@@ -187,11 +283,13 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
 
   gg_plt <- ggplot(df_plot, aes(x = tf_estimate, y = index, xmin = tf_lower, xmax = tf_upper)) +
     geom_rect(aes(xmin = -Inf, xmax = Inf, ymin = index-0.5, ymax = index+0.5, fill = color)) +
+    annotate("segment", x = 0, y = 0, xend = 0, yend = max(df_plot$index)+0.5) +
+    annotate("segment", x = threshold, y = 0, xend = threshold, 
+             yend = max(df_plot$index)+0.5, color = "darkgoldenrod1") +
     geom_pointrange(shape = 22, fill = "black", size = .5, fatten = .5) +
     annotation_custom(grid::textGrob(plot_title, gp = gpar(col = "black", fontsize = 8)),
                       xmin = -Inf, xmax = Inf,
                       ymin = max(df_plot$index)+1, ymax = max(df_plot$index)+1) +
-    annotate("segment", x = 0, y = 0, xend = 0, yend = max(df_plot$index)+0.5) +
     xlab(xlabel) + theme_classic() + 
     scale_y_continuous(expand = c(0, 0), labels = c(df_plot$study_id,"ID"), breaks = c(df_plot$index,max(df_plot$index)+1)) +
     coord_cartesian(ylim = c(0.5, max(df_plot$index) + 1.5),xlim = tf_function(tf_xlims)) +
@@ -311,10 +409,11 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
            base_width = ggsize[2])
  
   # Export table
-  # Remove extentions
   
   # Export table with certain columns removed
   
+  # write_csv(file.path(proj_path, base_dir,  str_replace(fig_name,"[.].*$",".csv")))
+
 }
 
 

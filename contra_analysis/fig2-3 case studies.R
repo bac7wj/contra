@@ -29,13 +29,13 @@ df_chol$ICV <- df_chol$mean_x /(df_chol$s_x/sqrt(df_chol$n_x))
 
 # Calculate raw confidence Intervals for Difference in means
 # conf_ints_list <- t(sapply(1:nrow(df_chol), 
-#                            function(x) norm_confint_dmeans(df_chol$mean_x[x], df_chol$s_x[x], df_chol$n_x[x], 
+#                            function(x) norm_credint_dmeans(df_chol$mean_x[x], df_chol$s_x[x], df_chol$n_x[x], 
 #                                                            df_chol$mean_y[x], df_chol$s_y[x], df_chol$n_y[x],
 #                                                            conf.level = 0.95, relative = TRUE)))
 conf_ints_list = list()
 for (n in 1:nrow(df_chol)) {
   conf_ints_list[[n]] <-
-    norm_confint_dmeans(df_chol$mean_x[n], df_chol$s_x[n], df_chol$n_x[n],
+    norm_credint_dm(df_chol$mean_x[n], df_chol$s_x[n], df_chol$n_x[n],
                         df_chol$mean_y[n], df_chol$s_y[n], df_chol$n_y[n],
                         conf.level = 0.95, relative = TRUE)
 }; 
@@ -63,11 +63,9 @@ contra_plot(df = subset(df_contra, upper > 0 ), sort_colname = "closest", col_x_
 
 
 
+## Plaque Dataset
+#---------------------------------------------------------------------------
 
-source("R/contra_plot.R")
-
-
-# Cholesterol Dataset
 df_plaq <- read_csv(file.path(proj_path, base_dir, "plaq_results.csv"))
 df_plaq$study <- abbreviate(df_plaq$study,6)
 df_plaq$ICV <- df_plaq$mean_x /(df_plaq$s_x/sqrt(df_plaq$n_x))
@@ -75,13 +73,13 @@ df_plaq$ICV <- df_plaq$mean_x /(df_plaq$s_x/sqrt(df_plaq$n_x))
 
 # Calculate raw confidence Intervals for Difference in means
 # conf_ints_list <- t(sapply(1:nrow(df_plaq),
-#                            function(x) norm_confint_dmeans(df_plaq$mean_x[x], df_plaq$s_x[x], df_plaq$n_x[x],
+#                            function(x) norm_credint_dmeans(df_plaq$mean_x[x], df_plaq$s_x[x], df_plaq$n_x[x],
 #                                                            df_plaq$mean_y[x], df_plaq$s_y[x], df_plaq$n_y[x],
 #                                                            conf.level = 0.95, relative = TRUE)))
 conf_ints_list = list()
 for (n in 1:nrow(df_plaq)) {
   conf_ints_list[[n]] <-
-    norm_confint_dmeans(df_plaq$mean_x[n], df_plaq$s_x[n], df_plaq$n_x[n],
+    norm_credint_dm(df_plaq$mean_x[n], df_plaq$s_x[n], df_plaq$n_x[n],
                         df_plaq$mean_y[n], df_plaq$s_y[n], df_plaq$n_y[n],
                         conf.level = 0.95, relative = TRUE)
 }; conf_ints_list <- do.call(rbind,conf_ints_list)
