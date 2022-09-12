@@ -284,8 +284,6 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
   gg_plt <- ggplot(df_plot, aes(x = tf_estimate, y = index, xmin = tf_lower, xmax = tf_upper)) +
     geom_rect(aes(xmin = -Inf, xmax = Inf, ymin = index-0.5, ymax = index+0.5, fill = color)) +
     annotate("segment", x = 0, y = 0, xend = 0, yend = max(df_plot$index)+0.5) +
-    annotate("segment", x = threshold, y = 0, xend = threshold, 
-             yend = max(df_plot$index)+0.5, color = "darkgoldenrod1") +
     geom_pointrange(shape = 22, fill = "black", size = .5, fatten = .5) +
     annotation_custom(grid::textGrob(plot_title, gp = gpar(col = "black", fontsize = 8)),
                       xmin = -Inf, xmax = Inf,
@@ -300,6 +298,10 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
           axis.text.x = element_text(size = 7),
           axis.text.y = element_text(size = 7),
           plot.margin = unit(c(0,0, 0, 0), "pt"))
+  if (!is.null(threshold)) {
+    gg_plt <- annotate("segment", x = threshold, y = 0, xend = threshold, 
+                       yend = max(df_plot$index)+0.5, color = "darkgoldenrod1")
+  }
   gg_plt
   
   # # Change xlabels for Fold change product transform
