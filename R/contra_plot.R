@@ -15,9 +15,16 @@ abbreviate <- function(x, max.length=6) {
 }
 
 
-pretty_number <- function(x, relative) {
-  if (relative) {x = x*100}
+pretty_number <- function(x, relative = FALSE) {
+  #' @description formatted printing for an inpu number
+  #'
+  #' @param x numeric to be converted into a pretty string
+  #' @param relative boolean for whether x is a percent (versus raw number)
+  #' @return formatted string of input number x
   
+  
+  if (relative) {x = x*100}
+
   if (x==0) { 
     num = "0"
   } else if (abs(x)>10000) {
@@ -38,13 +45,63 @@ pretty_number <- function(x, relative) {
   # if (relative) {num = paste0(num,'%')}
   return(num)
 }
-
-
-pretty_numbers <- function(x,relative) {
+pretty_numbers <- function(x, relative) {
   x <- sapply(1:length(x), function(n) pretty_number(x[n], relative = relative))
   return(x)
 }
 
+
+fract_2_number <- function(s) {
+  
+  # strsplit("1\\2", '[/|\\]')
+  
+  
+  sp <- strsplit(s, '[/|\\]')
+
+  if (length(sp[[1]])==1) {
+    x <- as.numeric(sp[[1]])
+  } else if (length(sp[[1]])==2) {
+    x <- as.numeric(sp[[1]][1]) / as.numeric(sp[[1]][2])
+  } else {
+    stop("multiple slashes detected in fraction")
+  }
+  return(x)
+}
+
+calculate_contra_stats <- function(df) {
+    #' Calculates relative difference in means interval estimates, along with 
+    #' most difference in means and least difference in means
+  save(list = ls(all.names = TRUE), file = "temp/calculate_contra_stats.RData", 
+       envir = environment())
+  # load(file = "temp/calculate_contra_stats.RData")
+  
+  
+    # Calculate interval estimates
+    for (n in 1:nrow(df)) {
+      conf_ints_list[[n]] <-
+        norm_credint_dm(df$mean_x[n], df$s_x[n], df$n_x[n],
+                        df$mean_y[n], df$s_y[n], df$n_y[n],
+                        conf.level = 1-fract_2_number(df$alpha_dm[n]), relative = TRUE)
+    }
+    # Calculate contra statistics
+    bound_conf_ints <- do.call(rbind, conf_ints_list)
+    df_interval <- as.data.frame(matrix(unlist(bound_conf_ints), ncol = ncol(bound_conf_ints), 
+                                         dimnames = list(NULL, colnames(bound_conf_ints))))
+    
+    df_interval$rldm <- sapply(1:nrow(df_interval), function(x) 
+      ldm_from_interval_bounds(df_interval$lower[x], df_interval$upper[x]))
+    
+    
+    df_interval$rmdm <- sapply(1:nrow(df), function(x) 
+      mdm_credint_stats(mean_x = df$mean_x[x], var_x = df$s_x[x]^2, n_x = df$n_x[x],
+                        mean_y = df$mean_y[x], var_y = df$s_y[x]^2, n_y = df$n_y[x],
+                        conf.level = 1-fract_2_number(df$alpha_dm[n]), sharedVar = FALSE,
+                        relative = TRUE))
+    
+    return(df_interval)
+    
+    
+  }
 
 norm_credint_dm <-
   function(mean_x, s_x, n_x, mean_y, s_y, n_y, conf.level = 0.95, 
@@ -165,9 +222,8 @@ norm_confint_dm <- function(mean_x, s_x, n_x, mean_y, s_y, n_y,
   #' @param relative 
   #' 
   #' @return 
-
-  save(list = ls(all.names = TRUE), file = "temp/norm_confint_dmeans.RData", 
-       envir = environment())
+  # save(list = ls(all.names = TRUE), file = "temp/norm_confint_dmeans.RData", 
+  #      envir = environment())
   # load(file = "temp/norm_confint_dmeans.RData")
   
   mean_x_sims <- rnorm(n = num_param_sims, mean = mean_x, sd = sqrt(s_x^2 / n_x))

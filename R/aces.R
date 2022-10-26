@@ -9,22 +9,15 @@
 # p_load(cubature)
 
 
+
+
+
 mdm_credint <- function(x, y, conf.level = 0.95, num_param_sims = 250/(1-conf.level), 
                         plot=FALSE, relative = FALSE, sharedVar=FALSE, rand.seed = NA){
   #' @description calculates the (raw/relative) most difference in means, a 
   #' statistic that estimates the largest absolute difference in means supported
-  #' by the data. Uses credibility interval.
+  #' by the data (based on credible interval)
   #' Citation: https://arxiv.org/abs/2201.01239
-  #' 
-  #' Equation:
-  #' mdm <- Qraw(1-a_dm)
-  #' - where Qraw() is the quantile function of the posterior summarizing |u_dm|, 
-  #'   and a_dm is the significance level
-  #'   u_dm = u_x - u_y
-  #'   
-  #' rmdm <- Qrel(1-a_dm)
-  #' - where Qrel() is the quantile function of the posterior summarizing |ru_dm|, 
-  #'   and a_dm is the significance level
   #' 
   #' @param x vector of measurements from group 1 (experiment)
   #' @param y vector of measurements from group 2  (control)
@@ -33,56 +26,81 @@ mdm_credint <- function(x, y, conf.level = 0.95, num_param_sims = 250/(1-conf.le
   #' @param plot plot data
   #' @param relative FALSE: calculates mdm, TRUE: calculates rmdm
   #' @return value of mdm or rmdm
-
   # save(list = ls(all.names = TRUE), file = "temp/mdm_credint.RData",envir = environment())
   # load(file = "temp/mdm_credint.RData")
+  
   if (!is.na(rand.seed)) {set.seed(rand.seed)}
   
-  xbar <- mean(x)
-  ybar <- mean(y)
-  s2x <- var(x)
-  s2y <- var(y)
-  m <- length(x)
-  n <- length(y)
+  mdm <- mdm_credint_stats(mean_x = mean(x), var_x = var(x), m = length(x), 
+                    mean_y = mean(y), var_y = var(y), n = length(y), 
+                    sharedVar= sharedVar, num_param_sims = num_param_sims)
+  return(mdm)
+}
+
+
+mdm_credint_stats <- function(mean_x, var_x, n_x, mean_y, var_y, n_y, conf.level, 
+                              sharedVar = FALSE, num_param_sims = 250/(1-conf.level),
+                              relative = TRUE, plot = FALSE) {
+  #' @param mean_x mean of measurements from X
+  #' @param var_x variance of measurements from X
+  #' @param n_x number of x measurements
+  #' @param mean_y mean of measurements from Y
+  #' @param var_y variance of measurements from Y
+  #' @param n_y number of Y measurements
+  #' @param conf.level confident level of credibility interval
+  #' @param sharedVar Boolean for whether variance is assumed to be shared
+  #' @return value of mdm or rmdm
+  save(list = ls(all.names = TRUE), file = "temp/mdm_credint_stats.RData",envir = environment())
+  # load(file = "temp/mdm_credint_stats.RData")
+  # print(sprintf("x: %f+-%f, %i    y: %f+-%f, %i", mean_x,var_x,n_x,mean_y,var_y,n_y))
+  
   if(sharedVar){
-    shape <- .5*(m + n - 2)
-    scale <- .5*((m-1)*s2x + (n-1)*s2y)
+    shape <- .5*(n_x + n_y - 2)
+    scale <- .5*((n_x-1)*var_x + (n_y-1)*var_y)
     ssSims <- 1/rgamma(num_param_sims, shape = shape, rate = scale)
-    mu1Sims <- rnorm(n = num_param_sims, mean = xbar, sd = sqrt(ssSims/m))
-    mu2Sims <- rnorm(n = num_param_sims, mean = ybar, sd = sqrt(ssSims/n))
+    mu1Sims <- rnorm(n = num_param_sims, mean = mean_x, sd = sqrt(ssSims/n_x))
+    mu2Sims <- rnorm(n = num_param_sims, mean = mean_y, sd = sqrt(ssSims/n_y))
   }else{ # different variances
-    shape1 <- .5*(m-1)
-    scale1 <- .5*(m-1)*s2x
-    shape2 <- .5*(n-1)
-    scale2 <- .5*(n-1)*s2y
+    shape1 <- .5*(n_x-1)
+    scale1 <- .5*(n_x-1)*var_x
+    shape2 <- .5*(n_y-1)
+    scale2 <- .5*(n_y-1)*var_y
     ss1Sims <- 1/rgamma(n = num_param_sims, shape = shape1, rate = scale1)
     ss2Sims <- 1/rgamma(n = num_param_sims, shape = shape2, rate = scale2)
-    mu1Sims <- rnorm(n = num_param_sims, mean = xbar, sd = sqrt(ss1Sims/m))
-    mu2Sims <- rnorm(n = num_param_sims, mean = ybar, sd = sqrt(ss2Sims/n))
+    mu1Sims <- rnorm(n = num_param_sims, mean = mean_x, sd = sqrt(ss1Sims/n_x))
+    mu2Sims <- rnorm(n = num_param_sims, mean = mean_y, sd = sqrt(ss2Sims/n_y))
   }
   if(!relative){
     cdf <- ecdf(mu1Sims - mu2Sims)
   }else{
     cdf <- ecdf((mu1Sims - mu2Sims)/mu2Sims)
   }
+  #(x-y) / x 
+  # Largest estimate of (x-y)/x
+  # Stimate lo and hi for x and y assuming normality
+  x_lo = max(c(mean_x + sqrt(var_x)*qt(p = (1-conf.level), df = n_x-1), .Machine$double.eps^0.25))
+  x_hi =       mean_x + sqrt(var_y)*qt(p = conf.level,     df = n_x-1)
+  y_lo = max(c(mean_y + qt(p = (1-conf.level), df = n_y-1), .Machine$double.eps^0.25))
+  y_hi = mean_y + qt(p = conf.level, df = n_x-1)
+  # Largest estimate of (x-y)/x
+  rdm_hi = max(c(abs(x_lo-y_hi), abs(x_hi-y_lo)))/x_lo
+
   # solve $F(c) - F(-c) = .95
   upper <- uniroot(function(x){ cdf(x) - cdf(-x) - conf.level},
                    lower = 0,
-                   upper = max(c(abs(x),abs(y))),
+                   upper = rdm_hi,
                    extendInt = "yes")$root
-  if(plot & !relative){
+  if(plot & !relative) {
     hist(mu1Sims - mu2Sims)
     abline(v=upper,col="red")
     abline(v=-upper,col="red")
-  }else if(plot & relative){
+  } else if(plot & relative){
     hist((mu1Sims - mu2Sims)/mu2Sims)
     abline(v=upper,col="red")
     abline(v=-upper,col="red")
   }
   return(abs(upper))
 }
-
-
 
 
 
@@ -93,11 +111,11 @@ ldm_credint <- function(x, y, conf.level = 0.95, num_param_sims = 250/(1-conf.le
   #' data. Uses credibility interval.
   #' 
   #' Equation:
-  #' ldm <- sign(x_bar - ybar) * (sign(b_lo) == sign(b_hi)) * max(abs( c(b_lo, b_hi) ))
+  #' ldm <- sign(x_bar - mean_y) * (sign(b_lo) == sign(b_hi)) * max(abs( c(b_lo, b_hi) ))
   #'         original effect sign * force zero if interval includes zero * select closest bound to 0
   #' 
   #' Where b_lo and b_hi are credible bounds for u_dm whjen relative= FALSE and
-  #'   r_u_dm when realtive=TRUE
+  #'   r_u_dm when relative=TRUE
   #' 
   #' @param x vector of measurements from group a, experiment 1
   #' @param y vector of measurements from group a, experiment 1
@@ -107,32 +125,46 @@ ldm_credint <- function(x, y, conf.level = 0.95, num_param_sims = 250/(1-conf.le
   #' @param relative path to export figures to disk
   #' @param keepSign base name for exported figures
   #' @return value of ldm ro rldm
-  
   # save(list = ls(all.names = TRUE), file = "temp/mdm_credint.RData",envir = environment())
   # load(file = "temp/mdm_credint.RData")
   if (!is.na(rand.seed)) {set.seed(rand.seed)}
   
-  xbar <- mean(x)
-  ybar <- mean(y)
-  s2x <- var(x)
-  s2y <- var(y)
-  m <- length(x)
-  n <- length(y)
+  ldm <- ldm_credint_stats(mean_x = mean(x), var_x = var(x), n_x = length(x), 
+                                mean_y = mean(y), var_y = var(y), n_y = length(y),
+                                conf.level = conf.level, SharedVar = SharedVar, 
+                                KeepSign = KeepSign) 
+  return(ldm)
+}
+
+ldm_credint_stats <- function(mean_x, var_x, n_x, mean_y, var_y, n_y,
+                              conf.level, SharedVar, KeepSign) {
+  #' @param mean_x mean of measurements from X
+  #' @param var_x variance of measurements from X
+  #' @param n_x number of x measurements
+  #' @param mean_y mean of measurements from Y
+  #' @param var_y variance of measurements from Y
+  #' @param n_y number of Y measurements
+  #' @param conf.level confident level of credibility interval
+  #' @param sharedVar Boolean for whether variance is assumed to be shared
+  #' @param KeepSign boolean whether sign of effect size should be preserved
+  #' @return value of mdm or rmdm
+  #' 
+  #' 
   if(sharedVar){
-    shape <- .5*(m + n - 2)
-    scale <- .5*((m-1)*s2x + (n-1)*s2y)
+    shape <- .5*(n_x + n_y - 2)
+    scale <- .5*((n_x-1)*var_x + (n_y-1)*var_y)
     ssSims <- 1/rgamma(num_param_sims, shape = shape, rate = scale)
-    mu1Sims <- rnorm(n = num_param_sims, mean = xbar, sd = sqrt(ssSims/m))
-    mu2Sims <- rnorm(n = num_param_sims, mean = ybar, sd = sqrt(ssSims/n))
+    mu1Sims <- rnorm(n = num_param_sims, mean = mean_x, sd = sqrt(ssSims/n_x))
+    mu2Sims <- rnorm(n = num_param_sims, mean = mean_y, sd = sqrt(ssSims/n_y))
   }else{ # different variances
-    shape1 <- .5*(m-1)
-    scale1 <- .5*(m-1)*s2x
-    shape2 <- .5*(n-1)
-    scale2 <- .5*(n-1)*s2y
+    shape1 <- .5*(n_x-1)
+    scale1 <- .5*(n_x-1)*var_x
+    shape2 <- .5*(n_y-1)
+    scale2 <- .5*(n_y-1)*var_y
     ss1Sims <- 1/rgamma(n = num_param_sims, shape = shape1, rate = scale1)
     ss2Sims <- 1/rgamma(n = num_param_sims, shape = shape2, rate = scale2)
-    mu1Sims <- rnorm(n = num_param_sims, mean = xbar, sd = sqrt(ss1Sims/m))
-    mu2Sims <- rnorm(n = num_param_sims, mean = ybar, sd = sqrt(ss2Sims/n))
+    mu1Sims <- rnorm(n = num_param_sims, mean = mean_x, sd = sqrt(ss1Sims/n_x))
+    mu2Sims <- rnorm(n = num_param_sims, mean = mean_y, sd = sqrt(ss2Sims/n_y))
   }
   if(!relative){
     cdf <- ecdf(mu1Sims - mu2Sims)
@@ -142,34 +174,22 @@ ldm_credint <- function(x, y, conf.level = 0.95, num_param_sims = 250/(1-conf.le
   
   # TODO use prctile function
   b_lo <- uniroot(function(x){ cdf(x) - conf.level},
-                   lower = 0,
-                   upper = max(c(abs(x),abs(y))),
-                   extendInt = "yes")$root
+                  lower = 0,
+                  upper = max(c(abs(x),abs(y))),
+                  extendInt = "yes")$root
   
   b_hi <- uniroot(function(x){ cdf(x) - (1-conf.level)},
                   lower = 0,
                   upper = max(c(abs(x),abs(y))),
                   extendInt = "yes")$root
-
   
-  ldm <- sign(xbar - ybar) * (sign(b_lo) == sign(b_hi)) * min(abs( c(b_lo, b_hi) ))
+  
+  ldm <- sign(mean_x - mean_y) * (sign(b_lo) == sign(b_hi)) * min(abs( c(b_lo, b_hi) ))
   
   # Keep sign of effect size if requested, since sign matters for practical sig.
   if (!keepSign) {ldm <- abs(ldm)}
-  
-  # if(plot & !relative){
-  #   hist(mu1Sims - mu2Sims)
-  #   abline(v=upper,col="red")
-  #   abline(v=-upper,col="red")
-  # }else if(plot & relative){
-  #   hist((mu1Sims - mu2Sims)/mu2Sims)
-  #   abline(v=upper,col="red")
-  #   abline(v=-upper,col="red")
-  # }
-  # browser();
-  return(ldm)
+ return(ldm) 
 }
-
 
 
 
@@ -180,27 +200,27 @@ credint <- function(x,y, conf.level= 0.95, num_param_sims = 250/(1-conf.level),
   # y experiment group
   if (!is.na(rand.seed)) {set.seed(rand.seed)}
   
-  xbar <- mean(x)
-  ybar <- mean(y)
-  s2x <- var(x)
-  s2y <- var(y)
+  mean_x <- mean(x)
+  mean_y <- mean(y)
+  var_x <- var(x)
+  var_y <- var(y)
   m <- length(x)
   n <- length(y)
   if(sharedVar){
     shape <- .5*(m + n - 2)
-    scale <- .5*((m-1)*s2x + (n-1)*s2y)
+    scale <- .5*((m-1)*var_x + (n-1)*var_y)
     ssSims <- 1/rgamma(num_param_sims, shape = shape, rate = scale)
-    mux_sims <- rnorm(n = num_param_sims, mean = xbar, sd = sqrt(ssSims/m))
-    muy_sims <- rnorm(n = num_param_sims, mean = ybar, sd = sqrt(ssSims/n))
+    mux_sims <- rnorm(n = num_param_sims, mean = mean_x, sd = sqrt(ssSims/m))
+    muy_sims <- rnorm(n = num_param_sims, mean = mean_y, sd = sqrt(ssSims/n))
   }else{ # different variances
     shape1 <- .5*(m-1)
-    scale1 <- .5*(m-1)*s2x
+    scale1 <- .5*(m-1)*var_x
     shape2 <- .5*(n-1)
-    scale2 <- .5*(n-1)*s2y
+    scale2 <- .5*(n-1)*var_y
     ss1Sims <- 1/rgamma(n = num_param_sims, shape = shape1, rate = scale1)
     ss2Sims <- 1/rgamma(n = num_param_sims, shape = shape2, rate = scale2)
-    mux_sims  <- rnorm(n = num_param_sims, mean = xbar, sd = sqrt(ss1Sims/m))
-    muy_sims <- rnorm(n = num_param_sims, mean = ybar, sd = sqrt(ss2Sims/n))
+    mux_sims  <- rnorm(n = num_param_sims, mean = mean_x, sd = sqrt(ss1Sims/m))
+    muy_sims <- rnorm(n = num_param_sims, mean = mean_y, sd = sqrt(ss2Sims/n))
   }
   if(!relative){
     cdf <- ecdf(muy_sims - mux_sims)
@@ -231,27 +251,27 @@ mdm_confint <- function(x, y, conf.level = 0.95, num_param_sims = 250/(1-conf.le
   # save(list = ls(all.names = TRUE), file = "temp/mdm_credint.RData",envir = environment())
   # load(file = "temp/mdm_credint.RData")
   
-  xbar <- mean(x)
-  ybar <- mean(y)
-  s2x <- var(x)
-  s2y <- var(y)
+  mean_x <- mean(x)
+  mean_y <- mean(y)
+  var_x <- var(x)
+  var_y <- var(y)
   m <- length(x)
   n <- length(y)
   
   
-  mu1Sims <- rnorm(n = num_param_sims, mean = xbar, sd = sqrt(s2x / m))
-  mu2Sims <- rnorm(n = num_param_sims, mean = ybar, sd = sqrt(s2y / n))
+  mu1Sims <- rnorm(n = num_param_sims, mean = mean_x, sd = sqrt(var_x / m))
+  mu2Sims <- rnorm(n = num_param_sims, mean = mean_y, sd = sqrt(var_y / n))
   # shape1 <- .5*(m-1)
-  # scale1 <- .5*(m-1)*s2x
+  # scale1 <- .5*(m-1)*var_x
   # shape2 <- .5*(n-1)
-  # scale2 <- .5*(n-1)*s2y
+  # scale2 <- .5*(n-1)*var_y
   # ss1Sims <- 1/rgamma(n = num_param_sims, shape = shape1, rate = scale1)
   # ss2Sims <- 1/rgamma(n = num_param_sims, shape = shape2, rate = scale2)
-  # mu1Sims <- rnorm(n = num_param_sims, mean = xbar, sd = sqrt(ss1Sims/m))
-  # mu2Sims <- rnorm(n = num_param_sims, mean = ybar, sd = sqrt(ss2Sims/n))
+  # mu1Sims <- rnorm(n = num_param_sims, mean = mean_x, sd = sqrt(ss1Sims/m))
+  # mu2Sims <- rnorm(n = num_param_sims, mean = mean_y, sd = sqrt(ss2Sims/n))
 
-  # mu1Sims <-rowMeans(matrix(rnorm(n = m*num_param_sims, mean = xbar, sd = sqrt(s2x)), ncol = m))
-  # mu2Sims <-rowMeans(matrix(rnorm(n = n*num_param_sims, mean = ybar, sd = sqrt(s2y)), ncol = n))
+  # mu1Sims <-rowMeans(matrix(rnorm(n = m*num_param_sims, mean = mean_x, sd = sqrt(var_x)), ncol = m))
+  # mu2Sims <-rowMeans(matrix(rnorm(n = n*num_param_sims, mean = mean_y, sd = sqrt(var_y)), ncol = n))
     
   if(!relative){
     cdf <- ecdf(mu1Sims - mu2Sims)
@@ -306,7 +326,7 @@ mdm_tdist <- function(x, y = NULL, conf.level = 0.95) {
     wtt <- t.test(x=x,y=NULL, var.equal = FALSE, conf.level = 1-(1-conf.level)/4)
     df_d <- wtt$parameter
     
-    xbar_dm <- mean(x)
+    mean_x_dm <- mean(x)
     sd_d <- sd_x
     sd_dm = sd_x / sqrt(n_x)
     
@@ -317,19 +337,19 @@ mdm_tdist <- function(x, y = NULL, conf.level = 0.95) {
     wtt <- t.test(x=y,y=x, var.equal = FALSE, conf.level = 1-(1-conf.level)/4)
     df_d <- wtt$parameter
     
-    xbar_dm <- mean(y) - mean(x)
+    mean_x_dm <- mean(y) - mean(x)
     sd_d <- sqrt( (( n_x - 1) * sd_x^2  +  (n_y - 1) * sd_y^2 ) / df_d)
     sd_dm = sqrt( sd_x^2 / n_x  + sd_y^2 / n_y)
   }
   
   # Calculate search bounds for mdm, used for uniroot call
-  lo.bound= abs(xbar_dm)
+  lo.bound= abs(mean_x_dm)
   hi.bound = max(abs(wtt$conf.int))
   if (lo.bound>hi.bound) {browser();}
   
   # Quantile with prob set to alpha and sample estimates as parameters
   mdm <-  tryCatch(
-    qft(p = conf.level, df = df_d, mu = xbar_dm, sigma = sd_dm,
+    qft(p = conf.level, df = df_d, mu = mean_x_dm, sigma = sd_dm,
         lo.bound, hi.bound),
     error = function(c) NaN)
   
@@ -444,7 +464,7 @@ ldm_tdist <- function(x, y = NULL, conf.level = 0.95) {
     wtt <- t.test(x=x,y=y, var.equal = FALSE, conf.level = 1-(1-conf.level)/4)
     df_d <- wtt$parameter
     
-    xbar_dm <- mean(x)
+    mean_x_dm <- mean(x)
     sd_d <- sd_x
     sd_dm = sd_x / sqrt(n_x)
     
@@ -455,26 +475,26 @@ ldm_tdist <- function(x, y = NULL, conf.level = 0.95) {
     wtt <- t.test(x=y,y=x, var.equal = FALSE, conf.level = 1-(1-conf.level)/4)
     df_d <- wtt$parameter
     
-    xbar_dm <- mean(y) - mean(x)
+    mean_x_dm <- mean(y) - mean(x)
     sd_d <- sqrt( (( n_x - 1) * sd_x^2  +  (n_y - 1) * sd_y^2 ) / df_d)
     sd_dm = sqrt( sd_x^2 / n_x  + sd_y^2 / n_y)
   }
   
   # Calculate search bounds for ldm, used for uniroot call
   lo.bound <- 0
-  hi.bound <- abs(xbar_dm)
+  hi.bound <- abs(mean_x_dm)
   if (lo.bound>hi.bound) {browser();}
   
   
   # Calculate lower bound of mu_dm
-  lo.bound <- abs(xbar_dm) - qt(conf.level, df=df_d)*sd_dm
+  lo.bound <- abs(mean_x_dm) - qt(conf.level, df=df_d)*sd_dm
   # Equivalent to:
   # wtt <-t.test(x=y,y=x, var.equal = FALSE, conf.level = 1-2*(1-conf.level))
   if (lo.bound < 0) {
     ldm <- 0
   } else {
     # Lower quantile of folded normal
-    ldm <-  tryCatch(qft(p = 1-conf.level, df = df_d, mu = xbar_dm, sigma = sd_dm,
+    ldm <-  tryCatch(qft(p = 1-conf.level, df = df_d, mu = mean_x_dm, sigma = sd_dm,
                          lo.bound, hi.bound), error = function(c) NaN)
   }
   
@@ -597,7 +617,7 @@ qft <- function(p, df, mu, sigma, lo.bound, hi.bound) {
           sigma = sigma, lower = max(c(lo.bound - 10*sigma,0))),
     error = function(c) NaN)
   
-  # Then we integrate from xbar_dm and above to for the root, added the start_area
+  # Then we integrate from mean_x_dm and above to for the root, added the start_area
   # to the integration
   xroot <-  tryCatch(
     uniroot( function(z)
@@ -609,13 +629,13 @@ qft <- function(p, df, mu, sigma, lo.bound, hi.bound) {
   return(xroot)
 }
 
-get_FiellerInterval <- function(xbar, ybar, sSquared, v11, v22, f, v12 = 0, alpha=.025){
+get_FiellerInterval <- function(mean_x, mean_y, sSquared, v11, v22, f, v12 = 0, alpha=.025){
   tQuantile <- qt(1-alpha, f)
-  A <- xbar^2 - v11*sSquared*tQuantile^2
+  A <- mean_x^2 - v11*sSquared*tQuantile^2
   if(A <= 0)
     stop("confidence interval not available (unless you are okay with two disjoint intervals)")
-  B <- -2*((ybar - xbar)*xbar + sSquared*tQuantile^2*(v11 - v12))
-  C <- (ybar - xbar)^2 - sSquared*tQuantile^2*(v22 + v11 - 2*v12)
+  B <- -2*((mean_y - mean_x)*mean_x + sSquared*tQuantile^2*(v11 - v12))
+  C <- (mean_y - mean_x)^2 - sSquared*tQuantile^2*(v22 + v11 - 2*v12)
   discriminant <- B^2 - 4*A*C
   if(discriminant <= 0)
     stop("confidence interval not available (complex-valued)")
