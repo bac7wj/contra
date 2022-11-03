@@ -51,11 +51,12 @@ pretty_numbers <- function(x, relative) {
 }
 
 
+ldm_from_interval_bounds <- function(lo, hi) {
+  ldm <- (lo+hi)/2 * (sign(lo)==sign(hi)) *  min(abs(c(lo,hi)))
+  return(ldm)  
+}
+
 fract_2_number <- function(s) {
-  
-  # strsplit("1\\2", '[/|\\]')
-  
-  
   sp <- strsplit(s, '[/|\\]')
 
   if (length(sp[[1]])==1) {
@@ -75,7 +76,7 @@ calculate_contra_stats <- function(df) {
        envir = environment())
   # load(file = "temp/calculate_contra_stats.RData")
   
-  
+   conf_ints_list = list();
     # Calculate interval estimates
     for (n in 1:nrow(df)) {
       conf_ints_list[[n]] <-
@@ -89,7 +90,7 @@ calculate_contra_stats <- function(df) {
                                          dimnames = list(NULL, colnames(bound_conf_ints))))
     
     df_interval$rldm <- sapply(1:nrow(df_interval), function(x) 
-      ldm_from_interval_bounds(df_interval$lower[x], df_interval$upper[x]))
+      ldm_from_interval_bounds(df_interval$int_lower[x], df_interval$int_upper[x]))
     
     
     df_interval$rmdm <- sapply(1:nrow(df), function(x) 
@@ -144,11 +145,11 @@ norm_credint_dm <-
     dm_bounds <- quantile(dm,  quants, type = 1) 
     
     # Produce named list of output
-    out <- tibble(estimate = estimate, 
-                  lower = unname(dm_bounds[1]), 
-                  upper = unname(dm_bounds[2]), 
-                  lower_quantile = quants[1], upper_quantile = quants[2],
-                  relative = relative, conf.level = conf.level)
+    out <- tibble(int_estimate = estimate, 
+                  int_lower = unname(dm_bounds[1]), 
+                  int_upper = unname(dm_bounds[2]), 
+                  int_lower_quant = quants[1], int_upper_quant = quants[2],
+                  int_relative = relative, int_conf.level = conf.level)
     
     
     return(out)
@@ -259,11 +260,12 @@ norm_confint_dm <- function(mean_x, s_x, n_x, mean_y, s_y, n_y,
 }
   
 
-contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel = "Fold Mean Difference",
+contra_plot <- function(df = df, signed_sort_colname = "rldm", col_x_pos = "auto", xlabel = "Fold Mean Difference",
                         ggsize = c(3, 6), fig_path = getwd(), fig_name = "contra_plot.png",
+                        least_colname = c("rldm",'"Ls%"'), most_colname = c("rmdm",'"Ms%"'),
                         estimate_label = "est", plot_title = "Measurement", tf_xlims = NULL,
-                        relative = FALSE, estimate_colname = "estimate", rel_plot_widths = c(0.6,0.4),
-                        null_sort_colname = "estimate", cum_col_x_pos_adj = rep(0,ncol(df)-3),
+                        relative = FALSE, estimate_colname = "estimate", rel_plot_widths = c(0.5,0.5),
+                        null_sort_name = "int_estimate", cum_col_x_pos_adj = rep(0,ncol(df)-3),
                         pretty_cols = c(), threshold = NULL) {
   #' @description produces a contra_plot, which visualizes the fold difference 
   #' in means between a control group and experiment group in a series of studies.
@@ -276,35 +278,29 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
   #' @param col_x_pos: vector of relation x positions for table columns 
   #' reproduced in plot
   #' @return none
-  
   save(list = ls(all.names = TRUE), file = "temp/contra_plot.RData", 
        envir = environment())
   # load(file = "temp/contra_plot.RData")
 
   # Separate results between negative sign, zero, and positive sign
-  effect_sign <- ((sign(df$lower)==1) & (sign(df$upper)==1)) - 
-    ((sign(df$lower) == -1) & (sign(df$upper) == -1))
+  effect_sign <- ((sign(df$int_lower)==1) & (sign(df$int_upper)==1)) - 
+    ((sign(df$int_lower) == -1) & (sign(df$int_upper) == -1))
   
   # Negative effect size
   df_neg <-  df[effect_sign == -1,]
-  df_neg$closest <- df_neg$upper 
-  # Null effect size
   df_null <- df[effect_sign ==  0,]
-  df_null$closest <- 0
-  # Negative effect size
   df_pos <-  df[effect_sign ==  1,]
-  df_pos$closest <- df_pos$lower 
-  
+   
   # If sort requested, sort each result type and rewrite result index
-  if (!is.null(sort_colname)) {
-    if (is.null(df[[sort_colname]]) && (sort_colname != "closest") )
-    { stop("Column name for 'sort_colname' argument does not exist")}
+  if (!is.null(signed_sort_colname)) {
+    if (is.null(df[[signed_sort_colname]]) && (signed_sort_colname != "closest") )
+    { stop("Column name for 'signed_sort_colname' argument does not exist")}
     # dividers between result type
     div_index = c(0,0)
     # Sort neative, null, and positive results
-    df_neg <- df_neg[order(df_neg[[sort_colname]], decreasing = FALSE),]
-    df_null <- df_null[order(df_null[[null_sort_colname]], decreasing = FALSE),]
-    df_pos <- df_pos[order(df_pos[[sort_colname]], decreasing = FALSE),]
+    df_neg <- df_neg[order(df_neg[[signed_sort_colname]], decreasing = FALSE),]
+    df_null <- df_null[order(df_null[[null_sort_name]], decreasing = FALSE),]
+    df_pos <- df_pos[order(df_pos[[signed_sort_colname]], decreasing = FALSE),]
     
     df_plot <- rbind(df_neg, df_null, df_pos)
     df_plot$index <- 1:nrow(df_plot)
@@ -330,9 +326,9 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
   # # contract_1n1 <- function(x)  {x[x > 0] = x[x > 0] - 1; x[x < 0] = x[x < 0] + 1; return(x)}
   # contract_1n1 <- function(x) x
   # Add FCP transformed columns
-  df_plot$tf_estimate <- tf_function(df_plot$estimate)
-  df_plot$tf_lower    <- tf_function(df_plot$lower)
-  df_plot$tf_upper    <- tf_function(df_plot$upper)    
+  df_plot$tf_estimate <- tf_function(df_plot$int_estimate)
+  df_plot$tf_lower    <- tf_function(df_plot$int_lower)
+  df_plot$tf_upper    <- tf_function(df_plot$int_upper)    
   
   # Add alternating color boxes for readability
   df_plot$color <- rep(c("white", "gray95"), nrow(df_plot))[1:nrow(df_plot)]
@@ -373,32 +369,34 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
   # gg_plt <- gg_plt + scale_x_continuous(labels = new_xlabs, breaks = x_breaks)
   # gg_plt
  
+  
+  # least_colname= c("rldm",'"Ls%"'), most_colname = c("rmdm",'"Ms%"'),
+  
+  removed_cols <- 
+    c("int_estimate", "int_lower", "int_upper", "tf_lower", "color","index",
+      "tf_upper", "tf_estimate", "study_id", least_colname[1], most_colname[1])
+  
   # Data frame of metadata for contra_plot
-  meta_list <- c(estimate_label, colnames(subset( 
-    df_plot, select = -c(estimate, closest, lower,upper, color, index,
-                         tf_lower, tf_upper, tf_estimate, study_id) )))
+  meta_list <-
+    c(least_colname[1], most_colname[1],
+      colnames(df_plot)[!is.element(colnames(df_plot), removed_cols)])
+  
 
-  # Get column used as estimate
-  df_estimate <- data.frame(estimate = sapply(1:nrow(df_plot), function(x) 
-    pretty_number(df_plot[[estimate_colname]][x], relative = relative)))
-  df_meta = cbind(df_estimate,
-                  subset( df_plot, select = -c(lower, upper, estimate, closest,
-                                               tf_lower, tf_upper, tf_estimate,
-                                               study_id)))
-  names(df_meta)[1] <- estimate_label
-  
-  # Pretty print columsn specified
-  for (n in seq_along(pretty_cols)) {
-    df_meta[[pretty_cols[n]]] <- pretty_numbers(df_meta[[pretty_cols[n]]], relative = FALSE)
-  }
+  df_meta <- df_plot[,meta_list]
+
+  pretty_colnames <-c(least_colname[2], most_colname[2], 
+                      tools::toTitleCase(meta_list[3:length(meta_list)]))
   
   
+  df_meta[[least_colname[1]]] <-pretty_numbers(df_plot[[least_colname[1]]], relative = relative)
+  df_meta[[most_colname[1]]] <-pretty_numbers(df_plot[[most_colname[1]]], relative = relative)
+
   
   # Get max Character
   df_meta[nrow(df_plot) + 1,] <- rep(NA, ncol(df_meta))
-  df_meta$index[nrow(df_meta)] <- max(df_meta$index+1, na.rm = TRUE)
+  df_meta$index[nrow(df_meta)] <- max(df_plot$index, na.rm = TRUE)+1
   # Add column title as last entry to column title
-  pretty_hdrs <- paste0("bold(",str_to_title(colnames(df_meta)[1:(ncol(df_meta)-2)]), ")")
+  pretty_hdrs <- paste0("bold(",pretty_colnames, ")")
   df_meta[nrow(df_meta),1:(ncol(df_meta)-2)] <-
     paste0("bold(",str_to_title(colnames(df_meta)[1:(ncol(df_meta)-2)]), ")")
 
@@ -422,6 +420,9 @@ contra_plot <- function(df = df, sort_colname = NULL, col_x_pos = "auto", xlabel
     
   }
 
+  
+  df_meta$index <- c(df_plot$index, max(df_plot$index)+1)
+  df_meta$color <- c(df_plot$color, "white")
   df_meta$dummy_x = seq(0.02, 0.98, length.out = nrow(df_meta))
   
   gg_tbl <- ggplot(data = df_meta, aes(y = index)) +

@@ -10,7 +10,7 @@ source("R/contra_plot.R")
 source("R/candidate_stats_from_xlsx.R")
 
 
-base_dir = "contra_analysis"
+base_dir = "contra_analysis_neglgible"
 fig_num = "2" 
 dir.create(file.path(getwd(), base_dir,"figure"), showWarnings = FALSE)
 fig_path = paste(getwd(),"/",base_dir,"/figure/F",fig_num, sep="")
@@ -31,16 +31,26 @@ df_interval <- calculate_contra_stats(df_chol)
 # Contra-plot
 source("R/contra_plot.R")
 df_contra <- cbind(df_chol[c("study_id", "ctrl", "tx", "sp", "year", "study")],
-                   df_interval[c("estimate", "lower", "upper")])
-contra_plot(df = subset(df_contra, lower < 0 ), sort_colname = "closest", col_x_pos = "auto",
+                   df_interval[c("int_estimate", "int_lower", "int_upper", "rldm","rmdm")])
+df_contra <- subset(df_contra, rldm < 200)
+
+contra_plot(df = df_contra, col_x_pos = "auto",
             xlabel = "Relative Difference in Means", plot_title = "Total Plasma Cholesterol",
             ggsize = c(3.5, 6.5), fig_path = fig_path, fig_name = "Chol(-)_rel_conf_closer_contra_plot.png",
-            tf_xlims = c(-0.6, 0), relative = TRUE, estimate_colname = "closest", estimate_label = '"Ls%"',
-            cum_col_x_pos_adj = c(0, -.01, 0, 0.04, .02, 0))
+            tf_xlims = c(-0.6, 2), relative = TRUE, least_colname = c("rldm",'"Ls%"'),
+            most_colname = c("rmdm",'"Ms%"'),
+            cum_col_x_pos_adj = c(0, .04, 0, -.01, 0.04, -.02, 0))
+
+
+# least_col rldm
+# most_col rmdm
+
+
+
 
 contra_plot(df = subset(df_contra, upper > 0 ), sort_colname = "closest", col_x_pos = "auto", 
             xlabel = "Relative Difference in Means", plot_title = "Total Plasma Cholesterol",
-            ggsize = c(3.5, 6.5), fig_path = fig_path, fig_name = "Chol(+)_rel_conf_closer_contra_plot.png",
+            ggsize = c(3.5, 10), fig_path = fig_path, fig_name = "Chol(+)_rel_conf_closer_contra_plot.png",
             tf_xlims = c(0, 5), relative = TRUE, estimate_colname = "closest", estimate_label = '"Ls%"',
             cum_col_x_pos_adj = c(0, -.01, 0, 0.04, .02, 0))
 
@@ -66,15 +76,10 @@ df_conf_ints <- as.data.frame(matrix(unlist(conf_ints_list), ncol = ncol(conf_in
 # Contra-plot
 df_contra <- cbind(df_plaq[c("study_id","ctrl", "tx", "sp", "year", "study")],
                    df_conf_ints[c("estimate", "lower", "upper")])
-contra_plot(df = subset(df_contra, lower < 0 ), sort_colname = "closest", col_x_pos = "auto",
+contra_plot(df = df_contra, col_x_pos = "auto",
             xlabel = "Relative Difference in Means", plot_title = "Plaque Area",
             ggsize = c(3.5, 6.5), fig_path = fig_path, fig_name = "Plaq(-)_rel_conf_closer_contra_plot.png",
             tf_xlims = c(-0.95, 0), relative = TRUE, estimate_colname = "closest", estimate_label = '"Ls%"',
             cum_col_x_pos_adj = c(0, -.01, 0, 0.04, .02, 0))
 
-contra_plot(df = subset(df_contra, upper > 0 ), sort_colname = "closest", col_x_pos = "auto",
-            xlabel = "Relative Difference in Means", plot_title = "Plaque Area",
-            ggsize = c(3.5, 6.5), fig_path = fig_path, fig_name = "Plaq(+)_rel_conf_closer_contra_plot.png",
-            tf_xlims = c(0, 40), relative = TRUE, estimate_colname = "closest", estimate_label = '"Ls%"',
-            cum_col_x_pos_adj = c(0, -.01, 0, 0.04, .02, 0))
 
