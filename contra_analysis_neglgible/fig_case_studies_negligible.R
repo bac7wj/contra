@@ -43,7 +43,6 @@ contra_plot(df = df_contra, col_x_pos = "auto",
 
 ## Plaque Dataset
 #---------------------------------------------------------------------------
-
 df_plaq <- read_csv(file.path(proj_path, base_dir, "plaq_results.csv"))
 df_plaq$study <- abbreviate(df_plaq$study,6)
 df_plaq$ICV <- df_plaq$mean_x /(df_plaq$s_x/sqrt(df_plaq$n_x))

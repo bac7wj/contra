@@ -322,7 +322,8 @@ contra_plot <- function(df = df, signed_sort_colname = "rldm", col_x_pos = "auto
   
   
   # Transforms to visualize 
-  # fc_prod <- function(x) {x[x<0] = -1/(x[x < 0] + 1);  x[x > 0] = x[x > 0] - 1; return(x)} 
+  fc_prod <- function(x) {x[x<0] = -1/(x[x < 0] + 1);  x[x > 0] = x[x > 0] - 1; return(x)}
+  
   # # contract_1n1 <- function(x)  {x[x > 0] = x[x > 0] - 1; x[x < 0] = x[x < 0] + 1; return(x)}
   # contract_1n1 <- function(x) x
   # Add FCP transformed columns
