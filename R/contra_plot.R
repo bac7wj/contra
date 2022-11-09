@@ -2,11 +2,11 @@
 
 if (!require("pacman")) {install.packages("pacman")}; library(pacman)
 p_load(ggplot2)
-# library(patchwork)
 p_load(gridExtra)
 p_load(grid)
 p_load(stringr)
 p_load(cowplot)
+source("R/mirrored_transforms.R")
 
 
 abbreviate <- function(x, max.length=6) {
@@ -266,7 +266,7 @@ contra_plot <- function(df = df, signed_sort_colname = "rldm", col_x_pos = "auto
                         estimate_label = "est", plot_title = "Measurement", tf_xlims = NULL,
                         relative = FALSE, estimate_colname = "estimate", rel_plot_widths = c(0.5,0.5),
                         null_sort_name = "int_estimate", cum_col_x_pos_adj = rep(0,ncol(df)-3),
-                        pretty_cols = c(), threshold = NULL) {
+                        pretty_cols = c(), threshold = NULL, mirror_x_axis = FALSE) {
   #' @description produces a contra_plot, which visualizes the fold difference 
   #' in means between a control group and experiment group in a series of studies.
   #' 
@@ -297,7 +297,7 @@ contra_plot <- function(df = df, signed_sort_colname = "rldm", col_x_pos = "auto
     { stop("Column name for 'signed_sort_colname' argument does not exist")}
     # dividers between result type
     div_index = c(0,0)
-    # Sort neative, null, and positive results
+    # Sort negative, null, and positive results
     df_neg <- df_neg[order(df_neg[[signed_sort_colname]], decreasing = FALSE),]
     df_null <- df_null[order(df_null[[null_sort_name]], decreasing = FALSE),]
     df_pos <- df_pos[order(df_pos[[signed_sort_colname]], decreasing = FALSE),]
@@ -311,21 +311,17 @@ contra_plot <- function(df = df, signed_sort_colname = "rldm", col_x_pos = "auto
     # Remove dividers at top or bottom of plot
     div_index <- div_index[!(div_index == 0.5 | div_index == (nrow(df_plot)+0.5))]
 
-    
   } else {
     df_plot <- rbind(df_neg, df_null, df_pos)
   }
   
   # Stretch fold change on the negative x axis scale
-  tf_function = function(x) {return(x)}
-  # fc_stretch_rev = function(x) {x[x<0]<- -(1+x[x<0])/x[x<0]; return(x)}
+  if (mirror_x_axis) {
+    tf_function = function(x) mirror_rc(x, forward = TRUE)
+  } else {
+    tf_function = function(x) x
+  }
   
-  
-  # Transforms to visualize 
-  fc_prod <- function(x) {x[x<0] = -1/(x[x < 0] + 1);  x[x > 0] = x[x > 0] - 1; return(x)}
-  
-  # # contract_1n1 <- function(x)  {x[x > 0] = x[x > 0] - 1; x[x < 0] = x[x < 0] + 1; return(x)}
-  # contract_1n1 <- function(x) x
   # Add FCP transformed columns
   df_plot$tf_estimate <- tf_function(df_plot$int_estimate)
   df_plot$tf_lower    <- tf_function(df_plot$int_lower)
@@ -357,18 +353,22 @@ contra_plot <- function(df = df, signed_sort_colname = "rldm", col_x_pos = "auto
   }
   gg_plt
   
-  # # Change xlabels for Fold change product transform
-  # xlabs <- ggplot_build(gg_plt)$layout$panel_params[[1]]$x$get_labels()
-  # xlabs <- xlabs[!is.na(xlabs)]
-  # xbreaks <- ggplot_build(gg_plt)$layout$panel_params[[1]]$x$get_breaks()
-  # xbreaks <- xbreaks[!is.na(xbreaks)]
-  # neg_ind <- xbreaks < 0
-  # prev_neg_xlabs <- as.character(as.numeric(xlabs[neg_ind]))
-  # new_neg_xlabs <- paste0("1/",sub('.', '', prev_neg_xlabs))
-  # new_xlabs <- xlabs
-  # new_xlabs[neg_ind] <- new_neg_xlabs
-  # gg_plt <- gg_plt + scale_x_continuous(labels = new_xlabs, breaks = x_breaks)
-  # gg_plt
+  # If x-axis mirrored chosen, switch axis labels back to pre transform values
+  if (mirror_x_axis){
+    xlabs <- ggplot_build(gg_plt)$layout$panel_params[[1]]$x$get_labels()
+    # Remove NAs (sometimes there are hidden empty ticks)
+    xlabs <- xlabs[!is.na(xlabs)]
+
+    x_breaks <- ggplot_build(gg_plt)$layout$panel_params[[1]]$x$get_breaks()
+    x_breaks <- x_breaks[!is.na(x_breaks)]
+    
+    new_xlabs_num <- mirror_rc(as.numeric(xlabs), forward = FALSE)
+    new_xlabs <- as.character(new_xlabs_num)
+   
+    gg_plt <- gg_plt + scale_x_continuous(labels = new_xlabs, breaks = x_breaks)
+    gg_plt
+  }
+ 
  
   
   # least_colname= c("rldm",'"Ls%"'), most_colname = c("rmdm",'"Ms%"'),

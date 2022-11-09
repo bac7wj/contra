@@ -34,7 +34,7 @@ contra_plot(df = df_contra, col_x_pos = "auto",
             xlabel = "Relative Difference in Means", plot_title = "Total Plasma Cholesterol",
             ggsize = c(3.5, 6.5), fig_path = fig_path, fig_name = "Chol(-)_rel_conf_closer_contra_plot.png",
             tf_xlims = c(-0.6, 2), relative = TRUE, least_colname = c("rldm",'"Ls%"'),
-            most_colname = c("rmdm",'"Ms%"'),
+            most_colname = c("rmdm",'"Ms%"'), , mirror_x_axis = TRUE,
             cum_col_x_pos_adj = c(0, .04, 0, -.01, 0.04, -.02, 0))
 
 

@@ -30,7 +30,7 @@ mirror_rc <- function(x, forward = TRUE) {
   return(x);
 }
 
-
+1+1/(x-1)
 
 # Fold Change to Mirrored Fold Change
 mirror_fc <- function(x, forward = TRUE) {
@@ -39,6 +39,8 @@ mirror_fc <- function(x, forward = TRUE) {
   #' 
   #' The equation for fc is:
   #' fc = y/x
+  #' 
+  #' fc is a measure of amount rather than change. An FC of 1 is no change.
   #' 
   #' @param x numeric vector x
   #' @param forward boolean for direction of conversion. TRUE: fc to mfc. 
