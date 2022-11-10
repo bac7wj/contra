@@ -30,7 +30,6 @@ mirror_rc <- function(x, forward = TRUE) {
   return(x);
 }
 
-1+1/(x-1)
 
 # Fold Change to Mirrored Fold Change
 mirror_fc <- function(x, forward = TRUE) {

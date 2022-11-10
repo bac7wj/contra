@@ -52,7 +52,11 @@ pretty_numbers <- function(x, relative) {
 
 
 ldm_from_interval_bounds <- function(lo, hi) {
-  ldm <- (lo+hi)/2 * (sign(lo)==sign(hi)) *  min(abs(c(lo,hi)))
+  
+  # Restore sign of bounds  *  force zero if bounds flank zero * closest bound
+  ldm <- sign(mean(c(lo,hi))) * (sign(lo)==sign(hi)) *  min(abs(c(lo,hi)))
+  
+  
   return(ldm)  
 }
 
@@ -88,6 +92,9 @@ calculate_contra_stats <- function(df) {
     bound_conf_ints <- do.call(rbind, conf_ints_list)
     df_interval <- as.data.frame(matrix(unlist(bound_conf_ints), ncol = ncol(bound_conf_ints), 
                                          dimnames = list(NULL, colnames(bound_conf_ints))))
+    
+    # Saturate estiamtes beyond rdm<=-1
+    df_interval$int_lower[df_interval$int_lower< -1] <- -1  
     
     df_interval$rldm <- sapply(1:nrow(df_interval), function(x) 
       ldm_from_interval_bounds(df_interval$int_lower[x], df_interval$int_upper[x]))
