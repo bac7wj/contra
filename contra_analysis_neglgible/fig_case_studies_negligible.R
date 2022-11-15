@@ -17,7 +17,7 @@ fig_path = paste(getwd(),"/",base_dir,"/figure/F",fig_num, sep="")
 dir.create(fig_path, showWarnings = FALSE)
 
 
-## Cholesterol Dataset
+## Cholesterol dataset
 #---------------------------------------------------------------------------
 df_chol <- read_csv(file.path(proj_path, base_dir, "chol_results.csv"))
 df_chol$study <- abbreviate(df_chol$study,6)
@@ -39,9 +39,7 @@ contra_plot(df = df_contra, col_x_pos = "auto",
 
 
 
-
-
-## Plaque Dataset
+## Plaque dataset
 #---------------------------------------------------------------------------
 df_plaq <- read_csv(file.path(proj_path, base_dir, "plaq_results.csv"))
 df_plaq$study <- abbreviate(df_plaq$study,6)

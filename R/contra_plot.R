@@ -107,8 +107,8 @@ calculate_contra_stats <- function(df) {
     df_interval$rmdm <- sapply(1:nrow(df), function(x) 
       mdm_credint_stats(mean_x = df$mean_x[x], var_x = df$s_x[x]^2, n_x = df$n_x[x],
                         mean_y = df$mean_y[x], var_y = df$s_y[x]^2, n_y = df$n_y[x],
-                        conf.level = 1-fract.as.numeric(df$alpha_dm[n]), sharedVar = FALSE,
-                        relative = TRUE, rand.seed = 0))
+                        conf.level = 1-fract.as.numeric(df$alpha_dm[n]), relative = TRUE,
+                        sharedVar = FALSE, rand.seed = 0))
     return(df_interval)
 
   }

@@ -182,7 +182,8 @@ mdm_credint_stats <-
                                  relative = relative, conf.level = conf.level,
                                  sharedVar = sharedVar,rand.seed = rand.seed,
                                  num_param_sims = num_param_sims, return_cdf = FALSE)
-    upper <- unname(quantile(dm_sims,conf.level, type = 4))
+    upper <- unname(quantile(abs(dm_sims),conf.level, type = 4))
+    # browser()
     
     return(abs(upper))
   }
