@@ -27,7 +27,7 @@ p_load(RColorBrewer)
 p_load(tidyr)
 p_load(docstring)
 # User defined functions
-source("R/aces.R")
+source("R/contra.r")
 source("R/coverage_error_toolbox.R")
 
 
@@ -335,7 +335,7 @@ save_plot(paste(fig_path, "\\", fig_num, "_d mdm boundaries over mu.tiff",
 # Row 2: error rate of mdm in mu/sigma space
 #                                                                              #
 #______________________________________________________________________________#
-source("R/aces.R")
+source("R/contra.r")
 source("R/coverage_error_toolbox.R")
 # First Row
 # Coverage error simulations for mu space  

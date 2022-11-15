@@ -19,7 +19,7 @@ p_load(boot)
 p_load(readr)
 p_load(gplots)
 # User defined libraries
-source("R/aces.R")
+source("R/contra.r")
 source("R/strength_risk_assessment.R")
 
 # Figure parameters
@@ -132,7 +132,7 @@ df_unscaled_crit[[2]] <-
 
 # Contest 3) Higher df_pool
 # [Near from zero]
-source("R/aces.R")
+source("R/contra.r")
 #------------------------------------------------------------------------------
 n1 <- round(runif(n_sims, 6, 12))
 n2 <- round(runif(n_sims, 15, 30))

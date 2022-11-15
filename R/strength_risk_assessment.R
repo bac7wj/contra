@@ -33,11 +33,11 @@ p_load(confintr)
 # User defined libraries
 source("R/parallel_utils.R")
 source("R/row_stats_toolbox.R")
-source("R/aces.R")
+source("R/contra.r")
 
 # Parse all functions in file for parallel processing using user functions
 row_stats_toolbox_fun <- parse_functions_source("R/row_stats_toolbox.R")
-aces_functions <- parse_functions_source("R/aces.R")
+aces_functions <- parse_functions_source("R/contra.r")
 
 
 # Default distribution for population parameters for Exp 1 {a,b}, Exp 2 {a,b}

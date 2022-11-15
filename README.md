@@ -2,10 +2,10 @@
 The official repository for the most difference in means (https://arxiv.org/abs/2201.01239) and least difference in means (https://arxiv.org/abs/2205.12958) statistics<p>
 This repository is under continuous development for research. <p> <p>
 This repository contains code necessary to compute the following statistics <p>
-1. Most difference in means (&delta;<sub>M</sub>): calculated with mdm_credint() in R/aces.R, with relative=FALSE
-2. Relative most difference in means (r&delta;<sub>M</sub>): calculated with mdm_credint() in R/aces.R, with relative=TRUE
-3. Least difference in means (&delta;<sub>L</sub>): calculated with ldm_credint() in R/aces.R, with relative=FALSE
-4. Relative Least difference in means (r&delta;<sub>L</sub>): calculated with ldm_credint() in R/aces.R, with relative=TRUE
+1. Most difference in means (&delta;<sub>M</sub>): calculated with mdm_credint() in R/contra.r, with relative=FALSE
+2. Relative most difference in means (r&delta;<sub>M</sub>): calculated with mdm_credint() in R/contra.r, with relative=TRUE
+3. Least difference in means (&delta;<sub>L</sub>): calculated with ldm_credint() in R/contra.r, with relative=FALSE
+4. Relative Least difference in means (r&delta;<sub>L</sub>): calculated with ldm_credint() in R/contra.r, with relative=TRUE
 
 Note: run "set_wd_here.R" in base directoy first to set working directory to the base folder for the repository. All code assumes that is the location for the workign directory.
 
@@ -13,7 +13,7 @@ Note: run "set_wd_here.R" in base directoy first to set working directory to the
   
 1. __R/__: general r code for calculating statistics, integrated risk analysis, and correlation tests
    
-   1. __aces.R__: functions to calculate most difference in means and least difference in means statistics.
+   1. __contra.r__: functions to calculate most difference in means and least difference in means statistics.
    
    2. __candidate_stats_from_xlsx.R__: functions to import data for applied examples.
    

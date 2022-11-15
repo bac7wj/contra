@@ -16,7 +16,7 @@ p_load(BayesFactor)
 p_load(TOSTER)
 # Second generation p-values
 p_load(sgpv)
-source("R/aces.R")
+source("R/contra.r")
 
 ## User defined functions
 
