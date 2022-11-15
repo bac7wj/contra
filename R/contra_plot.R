@@ -15,37 +15,42 @@ abbreviate <- function(x, max.length=6) {
 }
 
 
-pretty_number <- function(x, relative = FALSE) {
-  #' @description formatted printing for an inpu number
-  #'
-  #' @param x numeric to be converted into a pretty string
-  #' @param relative boolean for whether x is a percent (versus raw number)
-  #' @return formatted string of input number x
-  
-  
-  if (relative) {x = x*100}
 
-  if (x==0) { 
-    num = "0"
-  } else if (abs(x)>10000) {
-    num <- str_replace(str_replace(str_replace(sprintf("%.1e", x),"e0", "e"), "-0","-"), "\\+0","")
-  } else if (abs(x) >= 100) {
-    num <- sprintf("%.0f",x) 
-  } else if (abs(x) >= 10) {
-    num <- sprintf("%.0f", x) 
-  } else if (abs(x) >= 1) {
-    num <- sprintf("%.1f", x) 
-  } else if (abs(x) >= .1) {
-    num <- sprintf("%.2f", x) 
-  }  else if (abs(x) >= .01) {
-      num <- sprintf("%.3f", x) 
-  } else {
-    num <- str_replace(str_replace(str_replace(sprintf("%.1e", x),"e0", "e"), "-0","-"), "\\+0","")
-  }
-  # if (relative) {num = paste0(num,'%')}
-  return(num)
-}
 pretty_numbers <- function(x, relative) {
+  
+  
+  
+  pretty_number <- function(x, relative = FALSE) {
+    #' @description formatted printing for an inpu number
+    #'
+    #' @param x numeric to be converted into a pretty string
+    #' @param relative boolean for whether x is a percent (versus raw number)
+    #' @return formatted string of input number x
+    
+    
+    if (relative) {x = x*100}
+    
+    if (x==0) { 
+      num = "0"
+    } else if (abs(x)>10000) {
+      num <- str_replace(str_replace(str_replace(sprintf("%.1e", x),"e0", "e"), "-0","-"), "\\+0","")
+    } else if (abs(x) >= 100) {
+      num <- sprintf("%.0f",x) 
+    } else if (abs(x) >= 10) {
+      num <- sprintf("%.0f", x) 
+    } else if (abs(x) >= 1) {
+      num <- sprintf("%.1f", x) 
+    } else if (abs(x) >= .1) {
+      num <- sprintf("%.2f", x) 
+    }  else if (abs(x) >= .01) {
+      num <- sprintf("%.3f", x) 
+    } else {
+      num <- str_replace(str_replace(str_replace(sprintf("%.1e", x),"e0", "e"), "-0","-"), "\\+0","")
+    }
+    # if (relative) {num = paste0(num,'%')}
+    return(num)
+  }
+
   x <- sapply(1:length(x), function(n) pretty_number(x[n], relative = relative))
   return(x)
 }
@@ -57,7 +62,7 @@ ldm_from_interval_bounds <- function(lo, hi) {
   return(ldm)  
 }
 
-fract_2_number <- function(s) {
+fract.as.numeric <- function(s) {
   sp <- strsplit(s, '[/|\\]')
 
   if (length(sp[[1]])==1) {
@@ -77,20 +82,29 @@ calculate_contra_stats <- function(df) {
        envir = environment())
   # load(file = "temp/calculate_contra_stats.RData")
   
+
    conf_ints_list = list();
     # Calculate interval estimates
     for (n in 1:nrow(df)) {
       conf_ints_list[[n]] <-
-        norm_credint_dm(df$mean_x[n], df$s_x[n], df$n_x[n],
-                        df$mean_y[n], df$s_y[n], df$n_y[n],
-                        conf.level = 1-fract_2_number(df$alpha_dm[n]), relative = TRUE)
+        dm_credint_stats(mean_x = df$mean_x[n], var_x = df$s_x[n]^2, n_x = df$n_x[n],
+                         mean_y = df$mean_y[n], var_y = df$s_y[n]^2, n_y = df$n_y[n],
+                        conf.level = 1-fract.as.numeric(df$alpha_dm[n]), relative = TRUE,
+                        sharedVar = FALSE, rand.seed = 0)
+      
+      conf_ints_list[[n]] <-
+        norm_credint_dm(mean_x = df$mean_x[n], s_x = df$s_x[n], n_x = df$n_x[n],
+                 mean_y = df$mean_y[n], s_y = df$s_y[n], n_y = df$n_y[n],
+                 conf.level = 1-fract.as.numeric(df$alpha_dm[n]), sharedVar = FALSE,
+                 relative = FALSE, rand.seed = 0)
+          
     }
     # Calculate contra statistics
-    bound_conf_ints <- do.call(rbind, conf_ints_list)
-    df_interval <- as.data.frame(matrix(unlist(bound_conf_ints), ncol = ncol(bound_conf_ints), 
-                                         dimnames = list(NULL, colnames(bound_conf_ints))))
+   df_interval <- do.call(rbind, conf_ints_list)
+    # df_interval <- as.data.frame(matrix(unlist(bound_conf_ints), ncol = ncol(bound_conf_ints), 
+    #                                      dimnames = list(NULL, colnames(bound_conf_ints))))
     
-    # Saturate estimattes beyond rdm<=-1
+    # Saturate estimates beyond rdm<=-1
     df_interval$int_lower[df_interval$int_lower< -1] <- -1  
     
     df_interval$rldm <- sapply(1:nrow(df_interval), function(x) 
@@ -99,22 +113,22 @@ calculate_contra_stats <- function(df) {
     df_interval$rmdm <- sapply(1:nrow(df), function(x) 
       mdm_credint_stats(mean_x = df$mean_x[x], var_x = df$s_x[x]^2, n_x = df$n_x[x],
                         mean_y = df$mean_y[x], var_y = df$s_y[x]^2, n_y = df$n_y[x],
-                        conf.level = 1-fract_2_number(df$alpha_dm[n]), sharedVar = FALSE,
-                        relative = TRUE))
+                        conf.level = 1-fract.as.numeric(df$alpha_dm[n]), sharedVar = FALSE,
+                        relative = TRUE, rand.seed = 0))
     return(df_interval)
 
   }
 
 norm_credint_dm <-
-  function(mean_x, s_x, n_x, mean_y, s_y, n_y, conf.level = 0.95, 
-           num_param_sims = 250/(1-conf.level), sharedVar = FALSE, 
+  function(mean_x, s_x, n_x, mean_y, s_y, n_y, conf.level = 0.95,
+           num_param_sims = 250/(1-conf.level), sharedVar = FALSE,
            relative = FALSE, rand.seed = NA) {
-    
-    save(list = ls(all.names = TRUE), file = "temp/norm_credint_dm.RData", 
+
+    save(list = ls(all.names = TRUE), file = "temp/norm_credint_dm.RData",
          envir = environment())
     # load(file = "temp/norm_credint_dm.RData")
-    
-    
+
+
     # x control group
     # y experiment group
     if (!is.na(rand.seed)) {set.seed(rand.seed)}
@@ -134,7 +148,7 @@ norm_credint_dm <-
       mux_sims  <- rnorm(n = num_param_sims, mean = mean_x, sd = sqrt(ss1Sims / n_x))
       muy_sims <- rnorm(n = num_param_sims, mean = mean_y, sd = sqrt(ss2Sims / n_y))
     }
-    
+
     if (!relative) {
       dm <- muy_sims - mux_sims
       estimate <- mean_y - mean_x
@@ -143,123 +157,21 @@ norm_credint_dm <-
       estimate <- (mean_y - mean_x)/ mean_x
     }
     quants <- c((1-conf.level)/2,1 - (1-conf.level)/2)
-    dm_bounds <- quantile(dm,  quants, type = 1) 
-    
+    dm_bounds <- quantile(dm,  quants, type = 1)
+
     # Produce named list of output
-    out <- tibble(int_estimate = estimate, 
-                  int_lower = unname(dm_bounds[1]), 
-                  int_upper = unname(dm_bounds[2]), 
+    out <- tibble(int_estimate = estimate,
+                  int_lower = unname(dm_bounds[1]),
+                  int_upper = unname(dm_bounds[2]),
                   int_lower_quant = quants[1], int_upper_quant = quants[2],
                   int_relative = relative, int_conf.level = conf.level)
-    
-    
+
+
     return(out)
   }
 
 
 
-rnorm_confint_dm <- function(mean_x, sd_x, n_x, mean_y, sd_y, n_y, conf.level = 0.95, 
-                       verbose = FALSE,  var.equal = FALSE, method = "fieller")  {
-  #' @description Calculates the relative most difference in means assuming with
-  #' rmdm = mdm/X, X being the control group and Y the experimental
-  #' 
-  #' @param xn_x vector of measurements in control group
-  #' @param y_y vector of measurements in experimental group
-  #' @param conf.level significance level for calculating upper mdm
-  #' 
-  #' @return relative most difference in means
-  
-  # Equation for pooled variance taken from:
-  # https://sphweb.bumc.bu.edu/otlt/mph-modules/bs/bs704_confidence_intervals/bs704_confidence_intervals5.html
-  
-  # Calculate basic sample statistics
-  se_x = sd_x/sqrt(n_x)
-  se_y = sd_y/sqrt(n_y)
-  
-  mean_dm = (mean_y - mean_x)/mean_x
-  df <- n_x + n_y - 2
-  
-  # sSquared <- (sum((x - mean_x)^2) + sum((y - mean_y)^2))/df
-  sSquared <- ((n_x-1)*sd_x^2 + (n_y-1)*sd_y^2)/df
-  
-  
-  fieller_int <- tryCatch(get_FiellerInterval(mean_x, mean_y, sSquared, 
-                                              1/n_x, 1/n_y, df, v12 = 0, alpha=1-conf.level), 
-                          error = function(c) data.frame(upper = NaN, lower = NaN))
-  
-  rmdm <- max(abs(c(fieller_int$lower,fieller_int$upper)))
-  
-  # Produce named list of output
-  out <- tibble(estimate = mean_dm, 
-                lower = fieller_int$lower, 
-                upper = fieller_int$upper, 
-                lower_quantile = (1-conf.level)/2, upper_quantile = 1-(1-conf.level)/2,
-                relative = "TRUE", conf.level = conf.level)
-  
-  return(rmdm)
-}
-
-
-
-
-norm_confint_dm <- function(mean_x, s_x, n_x, mean_y, s_y, n_y, 
-                                conf.level = 0.95, num_param_sims = 500/(1-conf.level), 
-                        plot = FALSE, relative = FALSE) {
-  #' @description calculate confidence interval of the 95% difference in means 
-  #' between group x (control) and group y (experiment) assuming normal 
-  #' distributions for the means of both.
-  #' Relative dm is calculated in unscaled or scaled difference in means, i.e.
-  #' y-x, or (y-x)/x respectively. Confidence intervals are calcualted with monte
-  #' carlo sampling from the sampling distributions. The number of monte carlo 
-  #' trials is based on the specified significance level.
-  #' 
-  #' @param mean_x 
-  #' @param s_x 
-  #' @param n_x 
-  #' @param mean_y 
-  #' @param s_y 
-  #' @param n_y 
-  #' @param conf.level 
-  #' @param plot 
-  #' @param relative 
-  #' 
-  #' @return 
-  # save(list = ls(all.names = TRUE), file = "temp/norm_confint_dmeans.RData", 
-  #      envir = environment())
-  # load(file = "temp/norm_confint_dmeans.RData")
-  
-  mean_x_sims <- rnorm(n = num_param_sims, mean = mean_x, sd = sqrt(s_x^2 / n_x))
-  mean_y_sims <- rnorm(n = num_param_sims, mean = mean_y, sd = sqrt(s_y^2 / n_y))
-
-  # Truncate all samples to have measurements > 0, since y,x > 0 is assumed
-  mean_x_sims[mean_x_sims < 0] = 0
-  mean_y_sims[mean_y_sims < 0] = 0
-
-  if (!relative) {
-    dm <- mean_y_sims - mean_x_sims
-    estimate <- mean_y - mean_x
-  } else {
-    dm <- (mean_y_sims - mean_x_sims)/mean_x_sims
-    estimate <- (mean_y - mean_x)/ mean_x
-  }
-  # Two tail quantiles
-  quants = c((1-conf.level)/2, 1-(1-conf.level)/2)
-  if (any(is.nan(dm))) {
-    save(list = ls(all.names = TRUE), file = "temp/norm_confint_dmeans.RData", 
-         envir = environment())
-    stop()
-  }
-  dm_bounds <- quantile(dm,  quants) 
-  
-  # Produce named list of output
-  out <- tibble(estimate = estimate, 
-                lower = unname(dm_bounds[1]), 
-                upper = unname(dm_bounds[2]), 
-           lower_quantile = quants[1], upper_quantile = quants[2],
-           relative = relative, conf.level = conf.level)
-  return(out)
-}
-  
 
 contra_plot <- function(df, signed_sort_colname = "rldm", col_x_pos = "auto", xlabel = "Fold Mean Difference",
                         ggsize = c(3, 6), fig_path = getwd(), fig_name = "contra_plot.png",

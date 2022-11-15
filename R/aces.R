@@ -9,65 +9,6 @@ p_load(docstring)
 # p_load(cubature)
 
 
-mdm_credint <- 
-  function(x, y, relative = FALSE, conf.level = 0.95, num_param_sims = 250/(1-conf.level), 
-           plot = FALSE, sharedVar = FALSE, rand.seed = NA){
-    #' Upper credibility bound of most different in means statistic
-    #' 
-    #' @description calculates the (raw/relative) most difference in means, a 
-    #' statistic that estimates the largest absolute difference in means supported
-    #' by the data (based on credible interval)
-    #' 
-    #' @param x vector of measurements from group 1 (experiment)
-    #' @param y vector of measurements from group 2  (control)
-    #' @param conf.level confidence level
-    #' @param num_param_sims number of monte carlo trials to calculate ldm
-    #' @param plot flag to plot histogram of data
-    #' @param relative flag to calculate relative or raw difference in means
-    #' @return raw or relative difference in means
-    #' @references https://arxiv.org/abs/2201.01239
-    #' @examples
-    #' x <- rnorm(10,10,.1); y <- rnorm(10,15,.1); mdm_credint(x,y, rand.seed = 0);
-    # save(list = ls(all.names = TRUE), file = "temp/mdm_credint.RData",envir = environment())
-    # load(file = "temp/mdm_credint.RData")
-    
-    if (!is.na(rand.seed)) {set.seed(rand.seed)}
-    mdm <- mdm_credint_stats(mean_x = mean(x), var_x = var(x), n_x = length(x), 
-                             mean_y = mean(y), var_y = var(y), n_y = length(y), 
-                             sharedVar= sharedVar, num_param_sims = num_param_sims,
-                             conf.level = conf.level)
-    return(mdm)
-  }
-
-
-mdm_credint_stats <- 
-  function(mean_x, var_x, n_x, mean_y, var_y, n_y, relative = TRUE, conf.level = 0.95,
-           sharedVar = FALSE, num_param_sims = 250/(1-conf.level), plot = FALSE, 
-           rand.seed = NA) {
-    #' @param mean_x mean of measurements from X
-    #' @param var_x variance of measurements from X
-    #' @param n_x number of x measurements
-    #' @param mean_y mean of measurements from Y
-    #' @param var_y variance of measurements from Y
-    #' @param n_y number of Y measurements
-    #' @param conf.level confident level of credibility interval
-    #' @param sharedVar Boolean, true assumes equal variance
-    #' @return value of raw or relative most difference in means
-    save(list = ls(all.names = TRUE), file = "temp/mdm_credint_stats.RData",envir = environment())
-    # load(file = "temp/mdm_credint_stats.RData")
-    # print(sprintf("x: %f+-%f, %i    y: %f+-%f, %i", mean_x,var_x,n_x,mean_y,var_y,n_y))
-    dm_sims <- posterior_norm_dm(mean_x=mean_x, var_x = var_x, n_x = n_x,
-                                 mean_y = mean_y, var_y = var_y, n_y = n_y,
-                                 relative = relative, conf.level = conf.level,
-                                 sharedVar = sharedVar,rand.seed = rand.seed,
-                                 num_param_sims = num_param_sims, return_cdf = FALSE)
-    upper <- unname(quantile(dm_sims,conf.level, type = 4))
-    
-    return(abs(upper))
-  }
-
-
-
 
 posterior_norm_dm <- 
   function(mean_x, var_x, n_x, mean_y, var_y, n_y, relative = TRUE, conf.level = 0.95,
@@ -140,6 +81,115 @@ posterior_norm_dm <-
   }
 
 
+
+dm_credint <- function(x,y, conf.level= 0.95, num_param_sims = 250/(1-conf.level), 
+                       sharedVar = FALSE, relative = FALSE, rand.seed = NA) {
+  #' @param x measurements from group x
+  #' @param y measurements from group y
+  #' @param conf.level confident level of credibility interval
+  #' @param num_param_sims number of monte carlo samples
+  #' @param sharedVar Boolean for whether variance is assumed to be shared
+  #' @param relative flag whether relative or raw difference in mean is estimated
+  #' @param sharedVar flag to assume shared variance for posterior of difference 
+  #' in means
+  #' @return credibility interval bounds for raw or relative difference in means
+  
+  if (!is.na(rand.seed)) {set.seed(rand.seed)}
+  dm_bounds <- dm_credint_stats(mean_x = mean(x), var_x = var(x), n_x = length(x),
+                                mean_y = mean(y), var_y = var(y), n_y = length(y),
+                                relative = relative, conf.level = conf.level,
+                                num_param_sims = num_param_sims, sharedVar = sharedVar, 
+                                rand.seed = rand.seed)
+  return(dm_bounds)
+}
+
+
+dm_credint_stats <- function(mean_x, var_x, n_x, mean_y, var_y, n_y, relative = TRUE,
+                             conf.level, num_param_sims = 250/(1-conf.level),
+                             sharedVar = FALSE, rand.seed =  NA) {
+  #' @param x measurements from group x
+  #' @param y measurements from group y
+  #' @param conf.level confident level of credibility interval
+  #' @param num_param_sims number of monte carlo samples
+  #' @param sharedVar Boolean for whether variance is assumed to be shared
+  #' @param relative flag whether relative or raw difference in mean is estimated
+  #' @param sharedVar flag to assume shared variance for posterior of difference 
+  #' in means
+  #' @return credibility interval bounds for raw or relative difference in means
+  
+  if (!is.na(rand.seed)) {set.seed(rand.seed)}
+  dm_sims <- posterior_norm_dm(mean_x = mean_x, var_x = var_x, n_x = n_x,
+                               mean_y = mean_y, var_y = var_y, n_y = n_y,
+                               relative = relative, conf.level = conf.level,
+                               sharedVar = sharedVar, rand.seed = rand.seed,
+                               num_param_sims = num_param_sims, return_cdf = FALSE)
+  dm_b <- unname(quantile(dm_sims,c(1-conf.level/2, conf.level/2), type = 4))
+  
+  df <- data.frame(int_estimate = (mean_y-mean_x)/mean_x,int_lower = dm_b[1], 
+                   int_upper = dm_b[2])
+  return(df)
+}
+
+
+mdm_credint <- 
+  function(x, y, relative = FALSE, conf.level = 0.95, num_param_sims = 250/(1-conf.level), 
+           plot = FALSE, sharedVar = FALSE, rand.seed = NA){
+    #' Upper credibility bound of most different in means statistic
+    #' 
+    #' @description calculates the (raw/relative) most difference in means, a 
+    #' statistic that estimates the largest absolute difference in means supported
+    #' by the data (based on credible interval)
+    #' 
+    #' @param x vector of measurements from group 1 (experiment)
+    #' @param y vector of measurements from group 2  (control)
+    #' @param conf.level confidence level
+    #' @param num_param_sims number of monte carlo trials to calculate ldm
+    #' @param plot flag to plot histogram of data
+    #' @param relative flag to calculate relative or raw difference in means
+    #' @return raw or relative difference in means
+    #' @references https://arxiv.org/abs/2201.01239
+    #' @examples
+    #' x <- rnorm(10,10,.1); y <- rnorm(10,15,.1); mdm_credint(x,y, rand.seed = 0);
+    # save(list = ls(all.names = TRUE), file = "temp/mdm_credint.RData",envir = environment())
+    # load(file = "temp/mdm_credint.RData")
+    
+    if (!is.na(rand.seed)) {set.seed(rand.seed)}
+    mdm <- mdm_credint_stats(mean_x = mean(x), var_x = var(x), n_x = length(x), 
+                             mean_y = mean(y), var_y = var(y), n_y = length(y), 
+                             sharedVar= sharedVar, num_param_sims = num_param_sims,
+                             conf.level = conf.level)
+    return(mdm)
+  }
+
+
+mdm_credint_stats <- 
+  function(mean_x, var_x, n_x, mean_y, var_y, n_y, relative = TRUE, conf.level = 0.95,
+           sharedVar = FALSE, num_param_sims = 250/(1-conf.level), plot = FALSE, 
+           rand.seed = NA) {
+    #' @param mean_x mean of measurements from X
+    #' @param var_x variance of measurements from X
+    #' @param n_x number of x measurements
+    #' @param mean_y mean of measurements from Y
+    #' @param var_y variance of measurements from Y
+    #' @param n_y number of Y measurements
+    #' @param conf.level confident level of credibility interval
+    #' @param sharedVar Boolean, true assumes equal variance
+    #' @return value of raw or relative most difference in means
+    save(list = ls(all.names = TRUE), file = "temp/mdm_credint_stats.RData",envir = environment())
+    # load(file = "temp/mdm_credint_stats.RData")
+    # print(sprintf("x: %f+-%f, %i    y: %f+-%f, %i", mean_x,var_x,n_x,mean_y,var_y,n_y))
+    dm_sims <- posterior_norm_dm(mean_x=mean_x, var_x = var_x, n_x = n_x,
+                                 mean_y = mean_y, var_y = var_y, n_y = n_y,
+                                 relative = relative, conf.level = conf.level,
+                                 sharedVar = sharedVar,rand.seed = rand.seed,
+                                 num_param_sims = num_param_sims, return_cdf = FALSE)
+    upper <- unname(quantile(dm_sims,conf.level, type = 4))
+    
+    return(abs(upper))
+  }
+
+
+
 ldm_credint <- function(x, y, conf.level = 0.95, num_param_sims = 250/(1-conf.level), 
                         plot = FALSE, relative = FALSE, SharedVar = FALSE, 
                         keepSign = TRUE, rand.seed = NA) {
@@ -205,30 +255,6 @@ ldm_credint_stats <- function(mean_x, var_x, n_x, mean_y, var_y, n_y,
   return(ldm) 
 }
 
-
-
-
-credint <- function(x,y, conf.level= 0.95, num_param_sims = 250/(1-conf.level), 
-                    sharedVar = FALSE, relative = FALSE, rand.seed = NA) {
-  #' @param x measurements from group x
-  #' @param y measurements from group y
-  #' @param conf.level confident level of credibility interval
-  #' @param num_param_sims number of monte carlo samples
-  #' @param sharedVar Boolean for whether variance is assumed to be shared
-  #' @param relative flag whether relative or raw difference in mean is estimated
-  #' @param sharedVar flag to assume shared variance for posterior of difference 
-  #' in means
-  #' @return credibility interval bounds for raw or relative difference in means
-
-  if (!is.na(rand.seed)) {set.seed(rand.seed)}
-  dm_sims <- posterior_norm_dm(mean_x=mean(x), var_x = var(x), n_x = length(x),
-                               mean_y = mean(y), var_y = var(y), n_y = length(y),
-                               relative = relative, conf.level = conf.level,
-                               sharedVar = sharedVar, rand.seed = rand.seed,
-                               num_param_sims = num_param_sims, return_cdf = FALSE)
-  dm_b <- unname(quantile(dm_sims,c(1-conf.level/2, conf.level/2), type = 4))
-  return(dm_b)
-}
 
 
 

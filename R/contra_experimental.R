@@ -384,3 +384,105 @@ get_FiellerInterval <- function(mean_x, mean_y, sSquared, v11, v22, f, v12 = 0, 
   list(lower = center - width, upper = center + width)
 }
 
+
+rnorm_confint_dm <- function(mean_x, sd_x, n_x, mean_y, sd_y, n_y, conf.level = 0.95, 
+                             verbose = FALSE,  var.equal = FALSE, method = "fieller")  {
+  #' @description Calculates the relative most difference in means assuming with
+  #' rmdm = mdm/X, X being the control group and Y the experimental
+  #' 
+  #' @param xn_x vector of measurements in control group
+  #' @param y_y vector of measurements in experimental group
+  #' @param conf.level significance level for calculating upper mdm
+  #' 
+  #' @return relative most difference in means
+  
+  # Equation for pooled variance taken from:
+  # https://sphweb.bumc.bu.edu/otlt/mph-modules/bs/bs704_confidence_intervals/bs704_confidence_intervals5.html
+  
+  # Calculate basic sample statistics
+  se_x = sd_x/sqrt(n_x)
+  se_y = sd_y/sqrt(n_y)
+  
+  mean_dm = (mean_y - mean_x)/mean_x
+  df <- n_x + n_y - 2
+  
+  # sSquared <- (sum((x - mean_x)^2) + sum((y - mean_y)^2))/df
+  sSquared <- ((n_x-1)*sd_x^2 + (n_y-1)*sd_y^2)/df
+  
+  
+  fieller_int <- tryCatch(get_FiellerInterval(mean_x, mean_y, sSquared, 
+                                              1/n_x, 1/n_y, df, v12 = 0, alpha=1-conf.level), 
+                          error = function(c) data.frame(upper = NaN, lower = NaN))
+  
+  rmdm <- max(abs(c(fieller_int$lower,fieller_int$upper)))
+  
+  # Produce named list of output
+  out <- tibble(estimate = mean_dm, 
+                lower = fieller_int$lower, 
+                upper = fieller_int$upper, 
+                lower_quantile = (1-conf.level)/2, upper_quantile = 1-(1-conf.level)/2,
+                relative = "TRUE", conf.level = conf.level)
+  
+  return(rmdm)
+}
+
+
+
+
+norm_confint_dm <- function(mean_x, s_x, n_x, mean_y, s_y, n_y, 
+                            conf.level = 0.95, num_param_sims = 500/(1-conf.level), 
+                            plot = FALSE, relative = FALSE) {
+  #' @description calculate confidence interval of the 95% difference in means 
+  #' between group x (control) and group y (experiment) assuming normal 
+  #' distributions for the means of both.
+  #' Relative dm is calculated in unscaled or scaled difference in means, i.e.
+  #' y-x, or (y-x)/x respectively. Confidence intervals are calcualted with monte
+  #' carlo sampling from the sampling distributions. The number of monte carlo 
+  #' trials is based on the specified significance level.
+  #' 
+  #' @param mean_x 
+  #' @param s_x 
+  #' @param n_x 
+  #' @param mean_y 
+  #' @param s_y 
+  #' @param n_y 
+  #' @param conf.level 
+  #' @param plot 
+  #' @param relative 
+  #' 
+  #' @return 
+  # save(list = ls(all.names = TRUE), file = "temp/norm_confint_dmeans.RData", 
+  #      envir = environment())
+  # load(file = "temp/norm_confint_dmeans.RData")
+  
+  mean_x_sims <- rnorm(n = num_param_sims, mean = mean_x, sd = sqrt(s_x^2 / n_x))
+  mean_y_sims <- rnorm(n = num_param_sims, mean = mean_y, sd = sqrt(s_y^2 / n_y))
+  
+  # Truncate all samples to have measurements > 0, since y,x > 0 is assumed
+  mean_x_sims[mean_x_sims < 0] = 0
+  mean_y_sims[mean_y_sims < 0] = 0
+  
+  if (!relative) {
+    dm <- mean_y_sims - mean_x_sims
+    estimate <- mean_y - mean_x
+  } else {
+    dm <- (mean_y_sims - mean_x_sims)/mean_x_sims
+    estimate <- (mean_y - mean_x)/ mean_x
+  }
+  # Two tail quantiles
+  quants = c((1-conf.level)/2, 1-(1-conf.level)/2)
+  if (any(is.nan(dm))) {
+    save(list = ls(all.names = TRUE), file = "temp/norm_confint_dmeans.RData", 
+         envir = environment())
+    stop()
+  }
+  dm_bounds <- quantile(dm,  quants) 
+  
+  # Produce named list of output
+  out <- tibble(estimate = estimate, 
+                lower = unname(dm_bounds[1]), 
+                upper = unname(dm_bounds[2]), 
+                lower_quantile = quants[1], upper_quantile = quants[2],
+                relative = relative, conf.level = conf.level)
+  return(out)
+}
