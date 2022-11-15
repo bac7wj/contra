@@ -91,12 +91,6 @@ calculate_contra_stats <- function(df) {
                          mean_y = df$mean_y[n], var_y = df$s_y[n]^2, n_y = df$n_y[n],
                         conf.level = 1-fract.as.numeric(df$alpha_dm[n]), relative = TRUE,
                         sharedVar = FALSE, rand.seed = 0)
-      
-      conf_ints_list[[n]] <-
-        norm_credint_dm(mean_x = df$mean_x[n], s_x = df$s_x[n], n_x = df$n_x[n],
-                       mean_y = df$mean_y[n], s_y = df$s_y[n], n_y = df$n_y[n],
-                       conf.level = 1-fract.as.numeric(df$alpha_dm[n]), sharedVar = FALSE,
-                       relative = TRUE, rand.seed = 0)
           
     }
     # Calculate contra statistics
