@@ -4,115 +4,152 @@
 # or difference between two distributions.
 
 # Load package manager
-# if (!require("pacman")) {install.packages("pacman")}; library(pacman)
-# # p_load(docstring)
+if (!require("pacman")) {install.packages("pacman")}; library(pacman)
+p_load(docstring)
 # p_load(cubature)
 
 
-
-
-
-mdm_credint <- function(x, y, conf.level = 0.95, num_param_sims = 250/(1-conf.level), 
-                        plot=FALSE, relative = FALSE, sharedVar=FALSE, rand.seed = NA){
-  #' @description calculates the (raw/relative) most difference in means, a 
-  #' statistic that estimates the largest absolute difference in means supported
-  #' by the data (based on credible interval)
-  #' Citation: https://arxiv.org/abs/2201.01239
-  #' 
-  #' @param x vector of measurements from group 1 (experiment)
-  #' @param y vector of measurements from group 2  (control)
-  #' @param conf.level confidence level
-  #' @param num_param_sims number of monte carlo trials to calcualte ldm
-  #' @param plot plot data
-  #' @param relative FALSE: calculates mdm, TRUE: calculates rmdm
-  #' @return value of mdm or rmdm
-  # save(list = ls(all.names = TRUE), file = "temp/mdm_credint.RData",envir = environment())
-  # load(file = "temp/mdm_credint.RData")
-  
-  if (!is.na(rand.seed)) {set.seed(rand.seed)}
-  
-  mdm <- mdm_credint_stats(mean_x = mean(x), var_x = var(x), m = length(x), 
-                    mean_y = mean(y), var_y = var(y), n = length(y), 
-                    sharedVar= sharedVar, num_param_sims = num_param_sims)
-  return(mdm)
-}
-
-
-mdm_credint_stats <- function(mean_x, var_x, n_x, mean_y, var_y, n_y, conf.level, 
-                              sharedVar = FALSE, num_param_sims = 250/(1-conf.level),
-                              relative = TRUE, plot = FALSE) {
-  #' @param mean_x mean of measurements from X
-  #' @param var_x variance of measurements from X
-  #' @param n_x number of x measurements
-  #' @param mean_y mean of measurements from Y
-  #' @param var_y variance of measurements from Y
-  #' @param n_y number of Y measurements
-  #' @param conf.level confident level of credibility interval
-  #' @param sharedVar Boolean for whether variance is assumed to be shared
-  #' @return value of mdm or rmdm
-  save(list = ls(all.names = TRUE), file = "temp/mdm_credint_stats.RData",envir = environment())
-  # load(file = "temp/mdm_credint_stats.RData")
-  # print(sprintf("x: %f+-%f, %i    y: %f+-%f, %i", mean_x,var_x,n_x,mean_y,var_y,n_y))
-  
-  if(sharedVar){
-    shape <- .5*(n_x + n_y - 2)
-    scale <- .5*((n_x-1)*var_x + (n_y-1)*var_y)
-    ssSims <- 1/rgamma(num_param_sims, shape = shape, rate = scale)
-    mu1Sims <- rnorm(n = num_param_sims, mean = mean_x, sd = sqrt(ssSims/n_x))
-    mu2Sims <- rnorm(n = num_param_sims, mean = mean_y, sd = sqrt(ssSims/n_y))
-  }else{ # different variances
-    shape1 <- .5*(n_x-1)
-    scale1 <- .5*(n_x-1)*var_x
-    shape2 <- .5*(n_y-1)
-    scale2 <- .5*(n_y-1)*var_y
-    ss1Sims <- 1/rgamma(n = num_param_sims, shape = shape1, rate = scale1)
-    ss2Sims <- 1/rgamma(n = num_param_sims, shape = shape2, rate = scale2)
-    mu1Sims <- rnorm(n = num_param_sims, mean = mean_x, sd = sqrt(ss1Sims/n_x))
-    mu2Sims <- rnorm(n = num_param_sims, mean = mean_y, sd = sqrt(ss2Sims/n_y))
+mdm_credint <- 
+  function(x, y, relative = FALSE, conf.level = 0.95, num_param_sims = 250/(1-conf.level), 
+           plot = FALSE, sharedVar = FALSE, rand.seed = NA){
+    #' Upper credibility bound of most different in means statistic
+    #' 
+    #' @description calculates the (raw/relative) most difference in means, a 
+    #' statistic that estimates the largest absolute difference in means supported
+    #' by the data (based on credible interval)
+    #' 
+    #' @param x vector of measurements from group 1 (experiment)
+    #' @param y vector of measurements from group 2  (control)
+    #' @param conf.level confidence level
+    #' @param num_param_sims number of monte carlo trials to calculate ldm
+    #' @param plot flag to plot histogram of data
+    #' @param relative flag to calculate relative or raw difference in means
+    #' @return raw or relative difference in means
+    #' @references https://arxiv.org/abs/2201.01239
+    #' @examples
+    #' x <- rnorm(10,10,.1); y <- rnorm(10,15,.1); mdm_credint(x,y, rand.seed = 0);
+    # save(list = ls(all.names = TRUE), file = "temp/mdm_credint.RData",envir = environment())
+    # load(file = "temp/mdm_credint.RData")
+    
+    if (!is.na(rand.seed)) {set.seed(rand.seed)}
+    mdm <- mdm_credint_stats(mean_x = mean(x), var_x = var(x), n_x = length(x), 
+                             mean_y = mean(y), var_y = var(y), n_y = length(y), 
+                             sharedVar= sharedVar, num_param_sims = num_param_sims,
+                             conf.level = conf.level)
+    return(mdm)
   }
-  if(!relative){
-    cdf <- ecdf(mu1Sims - mu2Sims)
-  }else{
-    cdf <- ecdf((mu1Sims - mu2Sims)/mu2Sims)
-  }
-  #(x-y) / x 
-  # Largest estimate of (x-y)/x
-  # Stimate lo and hi for x and y assuming normality
-  x_lo = max(c(mean_x + sqrt(var_x)*qt(p = (1-conf.level), df = n_x-1), .Machine$double.eps^0.25))
-  x_hi =       mean_x + sqrt(var_y)*qt(p = conf.level,     df = n_x-1)
-  y_lo = max(c(mean_y + qt(p = (1-conf.level), df = n_y-1), .Machine$double.eps^0.25))
-  y_hi = mean_y + qt(p = conf.level, df = n_x-1)
-  # Largest estimate of (x-y)/x
-  rdm_hi = max(c(abs(x_lo-y_hi), abs(x_hi-y_lo)))/x_lo
 
-  # solve $F(c) - F(-c) = .95
-  upper <- uniroot(function(x){ cdf(x) - cdf(-x) - conf.level},
-                   lower = 0,
-                   upper = rdm_hi,
-                   extendInt = "yes")$root
-  if(plot & !relative) {
-    hist(mu1Sims - mu2Sims)
-    abline(v=upper,col="red")
-    abline(v=-upper,col="red")
-  } else if(plot & relative){
-    hist((mu1Sims - mu2Sims)/mu2Sims)
-    abline(v=upper,col="red")
-    abline(v=-upper,col="red")
-  }
-  return(abs(upper))
-}
 
+mdm_credint_stats <- 
+  function(mean_x, var_x, n_x, mean_y, var_y, n_y, relative = TRUE, conf.level = 0.95,
+           sharedVar = FALSE, num_param_sims = 250/(1-conf.level), plot = FALSE, 
+           rand.seed = NA) {
+    #' @param mean_x mean of measurements from X
+    #' @param var_x variance of measurements from X
+    #' @param n_x number of x measurements
+    #' @param mean_y mean of measurements from Y
+    #' @param var_y variance of measurements from Y
+    #' @param n_y number of Y measurements
+    #' @param conf.level confident level of credibility interval
+    #' @param sharedVar Boolean, true assumes equal variance
+    #' @return value of raw or relative most difference in means
+    save(list = ls(all.names = TRUE), file = "temp/mdm_credint_stats.RData",envir = environment())
+    # load(file = "temp/mdm_credint_stats.RData")
+    # print(sprintf("x: %f+-%f, %i    y: %f+-%f, %i", mean_x,var_x,n_x,mean_y,var_y,n_y))
+    dm_sims <- posterior_norm_dm(mean_x=mean_x, var_x = var_x, n_x = n_x,
+                                 mean_y = mean_y, var_y = var_y, n_y = n_y,
+                                 relative = relative, conf.level = conf.level,
+                                 sharedVar = sharedVar,rand.seed = rand.seed,
+                                 num_param_sims = num_param_sims, return_cdf = FALSE)
+    upper <- unname(quantile(dm_sims,conf.level, type = 4))
+    
+    return(abs(upper))
+  }
+
+
+
+
+posterior_norm_dm <- 
+  function(mean_x, var_x, n_x, mean_y, var_y, n_y, relative = TRUE, conf.level = 0.95,
+           sharedVar = FALSE, num_param_sims = 250/(1-conf.level), rand.seed = NA,
+           return_cdf = TRUE, plot = FALSE) {
+    #' Calculates empirical cumulative distribution function of posterior of raw
+    #' or relative difference in means (or returns the raw monte carlo samples 
+    #' with return_cdf)
+    #' 
+    #' @description
+    #' 
+    #' @param mean_x mean of measurements from X
+    #' @param var_x variance of measurements from X
+    #' @param n_x number of x measurements
+    #' @param mean_y mean of measurements from Y
+    #' @param var_y variance of measurements from Y
+    #' @param n_y number of Y measurements
+    #' @param conf.level confident level of credibility interval
+    #' @param sharedVar Boolean for whether variance is assumed to be shared
+    #' @return ecdf or raw monte carlo samples of posterior of raw or relative 
+    #' difference in means
+    #' @examples
+    #' x <- rnorm(10,10,.1); y <- rnorm(10,15,.1); mdm_credint(x,y, rand.seed = 0);
+    # save(list = ls(all.names = TRUE), file = "temp/mdm_credint.RData",envir = environment())
+    # load(file = "temp/mdm_credint.RData")
+    
+    if (!is.na(rand.seed)) {set.seed(rand.seed)}
+    
+    if(sharedVar){
+      shape_xy <- .5*(n_x + n_y - 2)
+      scale_xy <- .5*((n_x-1)*var_x + (n_y-1)*var_y)
+      var_xy_sims <- 1/rgamma(num_param_sims, shape = shape_xy, rate = scale_xy)
+      mu_x_sims <- rnorm(n = num_param_sims, mean = mean_x, sd = sqrt(var_xy_sims/n_x))
+      mu_y_sims <- rnorm(n = num_param_sims, mean = mean_y, sd = sqrt(var_xy_sims/n_y))
+    }else{ # different variances
+      shape_x <- .5*(n_x-1)
+      scale_x <- .5*(n_x-1)*var_x
+      shape_y <- .5*(n_y-1)
+      scale_y <- .5*(n_y-1)*var_y
+      var_x_sims <- 1/rgamma(n = num_param_sims, shape = shape_x, rate = scale_x)
+      var_y_sims <- 1/rgamma(n = num_param_sims, shape = shape_y, rate = scale_y)
+      mu_x_sims <- rnorm(n = num_param_sims, mean = mean_x, sd = sqrt(var_x_sims/n_x))
+      mu_y_sims <- rnorm(n = num_param_sims, mean = mean_y, sd = sqrt(var_y_sims/n_y))
+    }
+    
+    if(plot & !relative) {
+      hist(mu_x_sims - mu_y_sims)
+      abline(v=upper,col="red"); abline(v=-upper,col="red")
+    } else if(plot & relative){
+      hist((mu_x_sims - mu_y_sims)/mu_y_sims)
+      abline(v=upper,col="red"); abline(v=-upper,col="red")
+    }
+    
+    if (return_cdf) { # Return empirical distribution function
+      if(!relative){ # Y-X
+        cdf <- ecdf(mu_y_sims - mu_x_sims)
+      }else{         # (Y-X)/X
+        cdf <- ecdf((mu_y_sims- mu_x_sims)/mu_x_sims)
+      } 
+      return(cdf)
+      
+    } else { # Return monte Carlo Trials
+      if(!relative){ # Y-X
+        mct <- mu_y_sims - mu_x_sims
+      }else{         # (Y-X)/X
+        mct <- (mu_y_sims- mu_x_sims)/mu_x_sims
+      } 
+      return(mct)
+    }
+  }
 
 
 ldm_credint <- function(x, y, conf.level = 0.95, num_param_sims = 250/(1-conf.level), 
-                        plot=FALSE, relative = FALSE, sharedVar=FALSE, keepSign = TRUE, rand.seed = NA){
+                        plot = FALSE, relative = FALSE, SharedVar = FALSE, 
+                        keepSign = TRUE, rand.seed = NA) {
   #' @description calculates the (raw/relative) least difference in means, a 
   #' statistic that estimates the smallest difference in means supported by the 
   #' data. Uses credibility interval.
   #' 
   #' Equation:
-  #' ldm <- sign(x_bar - mean_y) * (sign(b_lo) == sign(b_hi)) * max(abs( c(b_lo, b_hi) ))
-  #'         original effect sign * force zero if interval includes zero * select closest bound to 0
+  #' ldm <- sign(x_bar - mean_y) \* (sign(b_lo) == sign(b_hi)) \* max(abs( c(b_lo, b_hi) ))
+  #'         original effect sign \* force zero if interval includes zero \* select closest bound to 0
   #' 
   #' Where b_lo and b_hi are credible bounds for u_dm whjen relative= FALSE and
   #'   r_u_dm when relative=TRUE
@@ -125,19 +162,22 @@ ldm_credint <- function(x, y, conf.level = 0.95, num_param_sims = 250/(1-conf.le
   #' @param relative path to export figures to disk
   #' @param keepSign base name for exported figures
   #' @return value of ldm ro rldm
-  # save(list = ls(all.names = TRUE), file = "temp/mdm_credint.RData",envir = environment())
-  # load(file = "temp/mdm_credint.RData")
-  if (!is.na(rand.seed)) {set.seed(rand.seed)}
+  #' @examples
+  #' x <- rnorm(10,10,.1); y <- rnorm(10,15,.1); ldm_credint(x,y, rand.seed = 0);
+  #' 
+  save(list = ls(all.names = TRUE), file = "temp/ldm_credint.RData",envir = environment())
+  # load(file = "temp/ldm_credint.RData")
   
   ldm <- ldm_credint_stats(mean_x = mean(x), var_x = var(x), n_x = length(x), 
-                                mean_y = mean(y), var_y = var(y), n_y = length(y),
-                                conf.level = conf.level, SharedVar = SharedVar, 
-                                KeepSign = KeepSign) 
+                           mean_y = mean(y), var_y = var(y), n_y = length(y),
+                           conf.level = conf.level, SharedVar = SharedVar, 
+                           KeepSign = KeepSign, rand.seed = rand.seed) 
   return(ldm)
 }
 
+
 ldm_credint_stats <- function(mean_x, var_x, n_x, mean_y, var_y, n_y,
-                              conf.level, SharedVar, KeepSign) {
+                              conf.level, SharedVar = FALSE, KeepSign, rand.seed =  NA) {
   #' @param mean_x mean of measurements from X
   #' @param var_x variance of measurements from X
   #' @param n_x number of x measurements
@@ -148,499 +188,47 @@ ldm_credint_stats <- function(mean_x, var_x, n_x, mean_y, var_y, n_y,
   #' @param sharedVar Boolean for whether variance is assumed to be shared
   #' @param KeepSign boolean whether sign of effect size should be preserved
   #' @return value of mdm or rmdm
-  #' 
-  #' 
-  if(sharedVar){
-    shape <- .5*(n_x + n_y - 2)
-    scale <- .5*((n_x-1)*var_x + (n_y-1)*var_y)
-    ssSims <- 1/rgamma(num_param_sims, shape = shape, rate = scale)
-    mu1Sims <- rnorm(n = num_param_sims, mean = mean_x, sd = sqrt(ssSims/n_x))
-    mu2Sims <- rnorm(n = num_param_sims, mean = mean_y, sd = sqrt(ssSims/n_y))
-  }else{ # different variances
-    shape1 <- .5*(n_x-1)
-    scale1 <- .5*(n_x-1)*var_x
-    shape2 <- .5*(n_y-1)
-    scale2 <- .5*(n_y-1)*var_y
-    ss1Sims <- 1/rgamma(n = num_param_sims, shape = shape1, rate = scale1)
-    ss2Sims <- 1/rgamma(n = num_param_sims, shape = shape2, rate = scale2)
-    mu1Sims <- rnorm(n = num_param_sims, mean = mean_x, sd = sqrt(ss1Sims/n_x))
-    mu2Sims <- rnorm(n = num_param_sims, mean = mean_y, sd = sqrt(ss2Sims/n_y))
-  }
-  if(!relative){
-    cdf <- ecdf(mu1Sims - mu2Sims)
-  }else{
-    cdf <- ecdf((mu1Sims - mu2Sims)/mu2Sims)
-  }
   
-  # TODO use prctile function
-  b_lo <- uniroot(function(x){ cdf(x) - conf.level},
-                  lower = 0,
-                  upper = max(c(abs(x),abs(y))),
-                  extendInt = "yes")$root
+  dm_sims <- posterior_norm_dm(mean_x=mean_x, var_x = var_x, n_x = n_x,
+                               mean_y = mean_y, var_y = var_y, n_y = n_y,
+                               relative = relative, conf.level = conf.level,
+                               sharedVar = sharedVar, rand.seed = rand.seed,
+                               num_param_sims = num_param_sims, return_cdf = FALSE)
+  dm_b <- unname(quantile(dm_sims,c(1-conf.level, conf.level), type = 4))
   
-  b_hi <- uniroot(function(x){ cdf(x) - (1-conf.level)},
-                  lower = 0,
-                  upper = max(c(abs(x),abs(y))),
-                  extendInt = "yes")$root
+  # Least difference in means
+  ldm <- sign(sign(dm_b[1]) + sign(dm_b[2])) * min(abs( c(dm_b[1], dm_b[2]) ))
   
-  
-  ldm <- sign(mean_x - mean_y) * (sign(b_lo) == sign(b_hi)) * min(abs( c(b_lo, b_hi) ))
   
   # Keep sign of effect size if requested, since sign matters for practical sig.
   if (!keepSign) {ldm <- abs(ldm)}
- return(ldm) 
+  return(ldm) 
 }
 
 
 
 
 credint <- function(x,y, conf.level= 0.95, num_param_sims = 250/(1-conf.level), 
-                    sharedVar=FALSE, relative = FALSE, rand.seed = NA) {
-  # x control group
-  # y experiment group
+                    sharedVar = FALSE, relative = FALSE, rand.seed = NA) {
+  #' @param x measurements from group x
+  #' @param y measurements from group y
+  #' @param conf.level confident level of credibility interval
+  #' @param num_param_sims number of monte carlo samples
+  #' @param sharedVar Boolean for whether variance is assumed to be shared
+  #' @param relative flag whether relative or raw difference in mean is estimated
+  #' @param sharedVar flag to assume shared variance for posterior of difference 
+  #' in means
+  #' @return credibility interval bounds for raw or relative difference in means
+
   if (!is.na(rand.seed)) {set.seed(rand.seed)}
-  
-  mean_x <- mean(x)
-  mean_y <- mean(y)
-  var_x <- var(x)
-  var_y <- var(y)
-  m <- length(x)
-  n <- length(y)
-  if(sharedVar){
-    shape <- .5*(m + n - 2)
-    scale <- .5*((m-1)*var_x + (n-1)*var_y)
-    ssSims <- 1/rgamma(num_param_sims, shape = shape, rate = scale)
-    mux_sims <- rnorm(n = num_param_sims, mean = mean_x, sd = sqrt(ssSims/m))
-    muy_sims <- rnorm(n = num_param_sims, mean = mean_y, sd = sqrt(ssSims/n))
-  }else{ # different variances
-    shape1 <- .5*(m-1)
-    scale1 <- .5*(m-1)*var_x
-    shape2 <- .5*(n-1)
-    scale2 <- .5*(n-1)*var_y
-    ss1Sims <- 1/rgamma(n = num_param_sims, shape = shape1, rate = scale1)
-    ss2Sims <- 1/rgamma(n = num_param_sims, shape = shape2, rate = scale2)
-    mux_sims  <- rnorm(n = num_param_sims, mean = mean_x, sd = sqrt(ss1Sims/m))
-    muy_sims <- rnorm(n = num_param_sims, mean = mean_y, sd = sqrt(ss2Sims/n))
-  }
-  if(!relative){
-    cdf <- ecdf(muy_sims - mux_sims)
-  }else{
-    cdf <- ecdf((muy_sims - mux_sims)/mux_sims)
-  }
-  
-
-  b_lo <- uniroot(function(x){ cdf(x) - (1-conf.level)/2},
-                  lower = 0,
-                  upper = max(c(abs(x),abs(y))),
-                  extendInt = "yes")$root
-  
-  b_hi <- uniroot(function(x){ cdf(x) - (1-(1-conf.level)/2)},
-                  lower = 0,
-                  upper = max(c(abs(x),abs(y))),
-                  extendInt = "yes")$root
-  
-  return(c(b_lo, b_hi))
-  
+  dm_sims <- posterior_norm_dm(mean_x=mean(x), var_x = var(x), n_x = length(x),
+                               mean_y = mean(y), var_y = var(y), n_y = length(y),
+                               relative = relative, conf.level = conf.level,
+                               sharedVar = sharedVar, rand.seed = rand.seed,
+                               num_param_sims = num_param_sims, return_cdf = FALSE)
+  dm_b <- unname(quantile(dm_sims,c(1-conf.level/2, conf.level/2), type = 4))
+  return(dm_b)
 }
 
 
-
-
-mdm_confint <- function(x, y, conf.level = 0.95, num_param_sims = 250/(1-conf.level), 
-                        plot=FALSE, relative = FALSE){
-  # save(list = ls(all.names = TRUE), file = "temp/mdm_credint.RData",envir = environment())
-  # load(file = "temp/mdm_credint.RData")
-  
-  mean_x <- mean(x)
-  mean_y <- mean(y)
-  var_x <- var(x)
-  var_y <- var(y)
-  m <- length(x)
-  n <- length(y)
-  
-  
-  mu1Sims <- rnorm(n = num_param_sims, mean = mean_x, sd = sqrt(var_x / m))
-  mu2Sims <- rnorm(n = num_param_sims, mean = mean_y, sd = sqrt(var_y / n))
-  # shape1 <- .5*(m-1)
-  # scale1 <- .5*(m-1)*var_x
-  # shape2 <- .5*(n-1)
-  # scale2 <- .5*(n-1)*var_y
-  # ss1Sims <- 1/rgamma(n = num_param_sims, shape = shape1, rate = scale1)
-  # ss2Sims <- 1/rgamma(n = num_param_sims, shape = shape2, rate = scale2)
-  # mu1Sims <- rnorm(n = num_param_sims, mean = mean_x, sd = sqrt(ss1Sims/m))
-  # mu2Sims <- rnorm(n = num_param_sims, mean = mean_y, sd = sqrt(ss2Sims/n))
-
-  # mu1Sims <-rowMeans(matrix(rnorm(n = m*num_param_sims, mean = mean_x, sd = sqrt(var_x)), ncol = m))
-  # mu2Sims <-rowMeans(matrix(rnorm(n = n*num_param_sims, mean = mean_y, sd = sqrt(var_y)), ncol = n))
-    
-  if(!relative){
-    cdf <- ecdf(mu1Sims - mu2Sims)
-  } else {
-    cdf <- ecdf((mu1Sims - mu2Sims)/mu2Sims)
-  }
-  # solve $F(c) - F(-c) = .95
-  upper <- uniroot(function(x){ cdf(x) - cdf(-x) - conf.level},
-                   lower = 0,
-                   upper = max(c(abs(x),abs(y))),
-                   extendInt = "yes")$root
-  if(plot & !relative){
-    hist(mu1Sims - mu2Sims)
-    abline(v=upper,col="red")
-    abline(v=-upper,col="red")
-  }else if(plot & relative){
-    hist((mu1Sims - mu2Sims)/mu2Sims)
-    abline(v=upper,col="red")
-    abline(v=-upper,col="red")
-  }
-  return(abs(upper))
-}
-
-
-
-
-mdm_tdist <- function(x, y = NULL, conf.level = 0.95) {
-  #' @description Calculate most difference in means statistic from integrating 
-  #' over a folded t-distribution to an extent dicated by the conf.level
-  #'
-  #' @param x measurements from first group
-  #' @param y measurements from second group (optional)
-  #' @param conf.level confidence level for statistics (default 0.95)
-  #' @return Returns most difference in means (single value)
-  #' @usage mdm_tdist(x, y, conf.level = 0.95)
-  #' @examples
-  #' x <- rnorm(n=3,mean=0,sd=1); y <- rnorm(n=3,mean=0,sd=1);
-  #' mdm_tdist(x,y, conf.level = 0.95)
-  
-  # save(list = ls(all.names = TRUE), file = "temp/mdm_tdist.RData",envir = environment())
-  # load(file = "temp/mdm_tdist.RData")
-  
-  # Calculate basic stats x and y
-  n_x <- length(x); n_y <- length(y)
-  sd_x <- sd(x); sd_y <- sd(y)
-  
-  # Calculate difference in means stats
-  if (is.null(y)) {
-    # 1-sample case
-    # Degrees of freedom and upper search bound for quantile function calculated 
-    # from built-in welch's t-test
-    wtt <- t.test(x=x,y=NULL, var.equal = FALSE, conf.level = 1-(1-conf.level)/4)
-    df_d <- wtt$parameter
-    
-    mean_x_dm <- mean(x)
-    sd_d <- sd_x
-    sd_dm = sd_x / sqrt(n_x)
-    
-  } else {
-    # 2-sample case
-    # Degrees of freedom and upper search bound for quantiel function calculated 
-    # from built-in welch's t-test
-    wtt <- t.test(x=y,y=x, var.equal = FALSE, conf.level = 1-(1-conf.level)/4)
-    df_d <- wtt$parameter
-    
-    mean_x_dm <- mean(y) - mean(x)
-    sd_d <- sqrt( (( n_x - 1) * sd_x^2  +  (n_y - 1) * sd_y^2 ) / df_d)
-    sd_dm = sqrt( sd_x^2 / n_x  + sd_y^2 / n_y)
-  }
-  
-  # Calculate search bounds for mdm, used for uniroot call
-  lo.bound= abs(mean_x_dm)
-  hi.bound = max(abs(wtt$conf.int))
-  if (lo.bound>hi.bound) {browser();}
-  
-  # Quantile with prob set to alpha and sample estimates as parameters
-  mdm <-  tryCatch(
-    qft(p = conf.level, df = df_d, mu = mean_x_dm, sigma = sd_dm,
-        lo.bound, hi.bound),
-    error = function(c) NaN)
-  
-  # If integration fails pause execution
-  if (is.nan(mdm) || is.null(mdm)) {browser();}
-  
-  return(mdm)
-}
-
-
-
-# df_WelchSatter<- function(x,y) {
-#   s1 = sd(x)
-#   s2 = sd(y)
-#   n1 = length(x)
-#   n2 = length(y)
-# 
-#   v1 = n1 - 1; v2 = n2 - 1
-#   v = (s1^2/n1 + s2^2/n2)^2/ ( s1^4/(n1^2/v1)  +  s2^4/(n2^2/v2)  )
-#   return(v)
-# }
-
-
-
-
-macb_tdist_2sample <- function (x, y, conf.level = 0.95) {
-  #' Most absolute one-tailed confidence bounds of t-distribution
-  #' 
-  lo_b <- t.test(x = x, y = y, conf.level = conf.level, alternative = "greater")$conf.int[1]
-  up_b <- t.test(x = x, y = y, conf.level = conf.level, alternative = "less")$conf.int[2]
-  
-  macb <- max(abs(c(lo_b, up_b)))
-  
-  return(macb)
-}
-
-
-
-
-
-
-
-rmdm_tdist <- function(x_ctrl, y_exp, conf.level = 0.95, 
-                       verbose = FALSE,  var.equal = FALSE, method = "fieller")  {
-  #' @description Calculates the relative most difference in means assuming with
-  #' rmdm = mdm/X, X being the control group and Y the experimental
-  #' 
-  #' @param x_ctrl vector of measurements in control group
-  #' @param y_exp vector of measurements in experimental group
-  #' @param conf.level significance level for calculating upper mdm
-  #' 
-  #' @return relative most difference in means
-  
-  # Equation for pooled variance taken from:
-  # https://sphweb.bumc.bu.edu/otlt/mph-modules/bs/bs704_confidence_intervals/bs704_confidence_intervals5.html
-  
-  # Calculate basic sample statistics
-  mean_ctrl = mean(x_ctrl)
-  sd_ctrl = sd(x_ctrl)
-  n_ctrl = length(x_ctrl)
-  se_ctrl = sd_ctrl/sqrt(n_ctrl)
-  
-  mean_exp = mean(y_exp)
-  sd_exp = sd(y_exp)
-  n_exp = length(y_exp)
-  se_exp = sd_exp/sqrt(n_exp)
-  
-  mean_dm = mean_exp - mean_ctrl
-  df <- n_ctrl + n_exp - 2
-  
-  sSquared <- (sum((x_ctrl - mean_ctrl)^2) + sum((y_exp - mean_exp)^2))/df
-  
-  fieller_int <- tryCatch(get_FiellerInterval(mean_ctrl, mean_exp, sSquared, 
-                                              1/n_ctrl, 1/n_exp, df, v12 = 0, alpha=1-conf.level), 
-                          error = function(c) data.frame(upper = NaN, lower = NaN))
-  
-  rmdm <- max(abs(c(fieller_int$lower,fieller_int$upper)))
-  
-  
-  return(rmdm)
-}
-
-
-
-
-
-ldm_tdist <- function(x, y = NULL, conf.level = 0.95) {
-  #' @description Calculate least difference in means statistic from integrating 
-  #' over a folded t-distribution to an extent dictated by (1-conf.level)
-  #'
-  #' @param x measurements from first group
-  #' @param y measurements from second group (optional)
-  #' @param conf.level confidence level for statistics (default 0.95)
-  #' @return Returns most difference in means (single value)
-  #' @usage mdm_tdist(x, y, conf.level = 0.95)
-  #' @examples
-  #' x <- rnorm(n=6,mean=0,sd=1); y <- rnorm(n=6,mean=0,sd=1);
-  #' ldm_tdist(x,y, conf.level = 0.95)
-  
-  # save(list = ls(all.names = TRUE), file = "temp/mdm_tdist.RData",envir = environment())
-  # load(file = "temp/mdm_tdist.RData")
-  
-  # Calculate basic stats x and y
-  n_x <- length(x); n_y <- length(y)
-  sd_x <- sd(x); sd_y <- sd(y)
-  
-  # Calculate difference in means stats
-  if (is.null(y)) {
-    # 1-sample case
-    # Degrees of freedom and upper search bound for quantile function calculated 
-    # from built-in welch's t-test
-    wtt <- t.test(x=x,y=y, var.equal = FALSE, conf.level = 1-(1-conf.level)/4)
-    df_d <- wtt$parameter
-    
-    mean_x_dm <- mean(x)
-    sd_d <- sd_x
-    sd_dm = sd_x / sqrt(n_x)
-    
-  } else {
-    # 2-sample case
-    # Degrees of freedom and upper search bound for quantiel function calculated 
-    # from built-in welch's t-test
-    wtt <- t.test(x=y,y=x, var.equal = FALSE, conf.level = 1-(1-conf.level)/4)
-    df_d <- wtt$parameter
-    
-    mean_x_dm <- mean(y) - mean(x)
-    sd_d <- sqrt( (( n_x - 1) * sd_x^2  +  (n_y - 1) * sd_y^2 ) / df_d)
-    sd_dm = sqrt( sd_x^2 / n_x  + sd_y^2 / n_y)
-  }
-  
-  # Calculate search bounds for ldm, used for uniroot call
-  lo.bound <- 0
-  hi.bound <- abs(mean_x_dm)
-  if (lo.bound>hi.bound) {browser();}
-  
-  
-  # Calculate lower bound of mu_dm
-  lo.bound <- abs(mean_x_dm) - qt(conf.level, df=df_d)*sd_dm
-  # Equivalent to:
-  # wtt <-t.test(x=y,y=x, var.equal = FALSE, conf.level = 1-2*(1-conf.level))
-  if (lo.bound < 0) {
-    ldm <- 0
-  } else {
-    # Lower quantile of folded normal
-    ldm <-  tryCatch(qft(p = 1-conf.level, df = df_d, mu = mean_x_dm, sigma = sd_dm,
-                         lo.bound, hi.bound), error = function(c) NaN)
-  }
-  
-  # If integration fails pause execution
-  if (is.nan(ldm) || is.null(ldm)) {browser();}
-  
-  return(ldm)
-}
-
-
-
-lacb_tdist_2sample <- function (x, y, conf.level = 0.95) {
-  #' Least absolute one-tailed confidence bounds of t-distribution
-  #' 
-  lo_b <- t.test(x = x, y = y, conf.level = conf.level, alternative = "greater")$conf.int[1]
-  up_b <- t.test(x = x, y = y, conf.level = conf.level, alternative = "less")$conf.int[2]
-  
-  lacb <- min(abs(c(lo_b, up_b)))
-  if (sign(lo_b)!= sign(up_b)) {lacb <- 0}
-  
-  return(lacb)
-}
-
-
-rldm_tdist <- function(x_ctrl, y_exp, conf.level = 0.95, 
-                       verbose = FALSE,  var.equal = FALSE)  {
-  #' @description Calculates the relative most difference in means assuming in 
-  #' the form of rldm = (y_exp - x_ctrl)/x_ctrl
-  #' 
-  #' @param x_ctrl vector of measurements in control group
-  #' @param y_exp vector of measurements in experimental group
-  #' @param conf.level significance level for calculating ldm
-  #' 
-  #' @return relative least difference in means
-  # Equation for pooled variance taken from:
-  # https://sphweb.bumc.bu.edu/otlt/mph-modules/bs/bs704_confidence_intervals/bs704_confidence_intervals5.html
-  
-  # Calculate basic sample statistics
-  mean_ctrl = mean(x_ctrl); sd_ctrl = sd(x_ctrl)
-  n_ctrl = length(x_ctrl);se_ctrl = sd_ctrl/sqrt(n_ctrl)
-  
-  mean_exp = mean(y_exp); sd_exp = sd(y_exp)
-  n_exp = length(y_exp); se_exp = sd_exp/sqrt(n_exp)
-  
-  mean_dm = mean_exp - mean_ctrl
-  df <- n_ctrl + n_exp - 2
-  
-  sSquared <- (sum((x_ctrl - mean_ctrl)^2) + sum((y_exp - mean_exp)^2))/df
-  
-  fieller_int <- tryCatch(get_FiellerInterval(mean_ctrl, mean_exp, sSquared, 
-                                              1/n_ctrl, 1/n_exp, df, v12 = 0, alpha=1-conf.level), 
-                          error = function(c) data.frame(upper = NaN, lower = NaN))
-  
-  # RLDM is the bounds closest to zero, or zero of the bounds flank zero
-  rldm <- min(abs(c(fieller_int$lower,fieller_int$upper))) * 
-    (sign(fieller_int$lower)== sign(fieller_int$upper))
-  
-  return(rldm)
-}
-
-
-
-
-dft <- function(x, df, mu, sigma) {
-  #' @description: Probability density function for noncentral folded t-distribution
-  #' Equation from:
-  #'  https://en.wikipedia.org/wiki/Folded-t_and_half-t_distributions
-  #' @param x 
-  #' @param df degree of freedom
-  #' @param mu mean
-  #' @param sigma standard deviation
-  # save(list = ls(all.names = TRUE), file = "temp/dft.RData",envir = environment())
-  # load(file = "temp/dft.RData")
-  
-  v = df
-  t1 <- (1 +  (1/v) * ((x - mu)^2 / sigma^2 )) ^ ( -(v+1) / 2)
-  t2 <- (1 +  (1/v) * ((x + mu)^2 / sigma^2 )) ^ ( -(v+1) / 2)
-  
-  d <- gamma( (v+1)/2 ) / (gamma(v/2) * sqrt(v*pi*sigma^2) ) * (t1 + t2)
-  # d is zero for all x<0 by definition, so force d to 0 when x is negative
-  d[x < 0] <- 0
-  
-  return(d)
-}
-
-pft <- function(upper, df, mu, sigma, lower = -Inf) {
-  #' @description: cumulative distribution function for noncentral folded 
-  #' t-distribution
-  #' @param upper upper bounds of integration
-  #' @param df degree of freedom
-  #' @param mu mean
-  #' @param sigma standard deviation
-  #' @param lower lower bounds of integration, default -InF
-  # save(list = ls(all.names = TRUE), file = "temp/pft.RData",envir = environment())
-  # load(file = "temp/pft.RData")
-  
-  d <- integrate(f = function(y) dft(y, df, abs(mu),sigma),
-                 lower = lower, upper = upper,
-                 rel.tol = 1e-8, abs.tol = 1e-9)$value
-  
-  return(d)
-}
-
-
-qft <- function(p, df, mu, sigma, lo.bound, hi.bound) {
-  #' @description Quantile function for folded t-distribution
-  #'
-  #' @param p probability
-  # save(list = ls(all.names = TRUE), file = "temp/qft.RData",envir = environment())
-  # load(file = "temp/qft.RData")
-  
-  # Integration is also used to calculate p, but it can be a very sparse 
-  # integration (long spans where f(x)=0 and then a very small width spike in the pdf)
-  # To deal with this, integration is broken up into separate intervals to make 
-  # sure the spike is not missed
-  start_area = tryCatch(
-    pft(upper = max(c(lo.bound - 10*sigma,0)), df = df, mu = abs(mu), 
-        sigma = sigma, lower = 0) +
-      pft(upper = lo.bound, df = df, mu = abs(mu), 
-          sigma = sigma, lower = max(c(lo.bound - 10*sigma,0))),
-    error = function(c) NaN)
-  
-  # Then we integrate from mean_x_dm and above to for the root, added the start_area
-  # to the integration
-  xroot <-  tryCatch(
-    uniroot( function(z)
-      pft(upper = z, df = df, mu = abs(mu), sigma = sigma, lower = lo.bound) + 
-        start_area - p,
-      lower = lo.bound, upper = hi.bound, extendInt = "no")$root,
-    error = function(c) NaN)
-  
-  return(xroot)
-}
-
-get_FiellerInterval <- function(mean_x, mean_y, sSquared, v11, v22, f, v12 = 0, alpha=.025){
-  tQuantile <- qt(1-alpha, f)
-  A <- mean_x^2 - v11*sSquared*tQuantile^2
-  if(A <= 0)
-    stop("confidence interval not available (unless you are okay with two disjoint intervals)")
-  B <- -2*((mean_y - mean_x)*mean_x + sSquared*tQuantile^2*(v11 - v12))
-  C <- (mean_y - mean_x)^2 - sSquared*tQuantile^2*(v22 + v11 - 2*v12)
-  discriminant <- B^2 - 4*A*C
-  if(discriminant <= 0)
-    stop("confidence interval not available (complex-valued)")
-  center <- -B/2/A
-  width <- sqrt(discriminant)/2/A
-  list(lower = center - width, upper = center + width)
-}
 

@@ -6,7 +6,7 @@ source("R/mirrored_transforms.R")
 # RC = (Y-X)/X
 
 # Define conversion table between rc values x<0 and x>=0
-prcs <- c(.1, .25, .5, .75, 1, 1.25, 1.5, 2, 4, 5, 10, 20, 30, 50, 100)
+prcs <- c(.1, .25, .5, .75, 1, 1.25, 1.5, 2, 3, 4, 5, 10, 20, 30, 50, 100)
 df_rc = data.frame(prc=prcs)
 df_rc$nrc = mirror_rc(-df_rc$prc, forward = FALSE)
 

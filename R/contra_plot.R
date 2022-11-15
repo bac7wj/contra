@@ -50,13 +50,10 @@ pretty_numbers <- function(x, relative) {
   return(x)
 }
 
-
 ldm_from_interval_bounds <- function(lo, hi) {
-  
   # Restore sign of bounds  *  force zero if bounds flank zero * closest bound
   ldm <- sign(mean(c(lo,hi))) * (sign(lo)==sign(hi)) *  min(abs(c(lo,hi)))
-  
-  
+
   return(ldm)  
 }
 
@@ -93,22 +90,19 @@ calculate_contra_stats <- function(df) {
     df_interval <- as.data.frame(matrix(unlist(bound_conf_ints), ncol = ncol(bound_conf_ints), 
                                          dimnames = list(NULL, colnames(bound_conf_ints))))
     
-    # Saturate estiamtes beyond rdm<=-1
+    # Saturate estimattes beyond rdm<=-1
     df_interval$int_lower[df_interval$int_lower< -1] <- -1  
     
     df_interval$rldm <- sapply(1:nrow(df_interval), function(x) 
       ldm_from_interval_bounds(df_interval$int_lower[x], df_interval$int_upper[x]))
-    
-    
+
     df_interval$rmdm <- sapply(1:nrow(df), function(x) 
       mdm_credint_stats(mean_x = df$mean_x[x], var_x = df$s_x[x]^2, n_x = df$n_x[x],
                         mean_y = df$mean_y[x], var_y = df$s_y[x]^2, n_y = df$n_y[x],
                         conf.level = 1-fract_2_number(df$alpha_dm[n]), sharedVar = FALSE,
                         relative = TRUE))
-    
     return(df_interval)
-    
-    
+
   }
 
 norm_credint_dm <-
@@ -267,12 +261,12 @@ norm_confint_dm <- function(mean_x, s_x, n_x, mean_y, s_y, n_y,
 }
   
 
-contra_plot <- function(df = df, signed_sort_colname = "rldm", col_x_pos = "auto", xlabel = "Fold Mean Difference",
+contra_plot <- function(df, signed_sort_colname = "rldm", col_x_pos = "auto", xlabel = "Fold Mean Difference",
                         ggsize = c(3, 6), fig_path = getwd(), fig_name = "contra_plot.png",
                         least_colname = c("rldm",'"Ls%"'), most_colname = c("rmdm",'"Ms%"'),
                         estimate_label = "est", plot_title = "Measurement", tf_xlims = NULL,
                         relative = FALSE, estimate_colname = "estimate", rel_plot_widths = c(0.5,0.5),
-                        null_sort_name = "int_estimate", cum_col_x_pos_adj = rep(0,ncol(df)-3),
+                        null_sort_name = "rmdm", cum_col_x_pos_adj = rep(0,ncol(df)-3),
                         pretty_cols = c(), threshold = NULL, mirror_x_axis = FALSE) {
   #' @description produces a contra_plot, which visualizes the fold difference 
   #' in means between a control group and experiment group in a series of studies.
@@ -306,10 +300,16 @@ contra_plot <- function(df = df, signed_sort_colname = "rldm", col_x_pos = "auto
     div_index = c(0,0)
     # Sort negative, null, and positive results
     df_neg <- df_neg[order(df_neg[[signed_sort_colname]], decreasing = FALSE),]
-    df_null <- df_null[order(df_null[[null_sort_name]], decreasing = FALSE),]
+    
+    # Split null into negative and positive null based on rdm estimate
+    df_null_pos <- df_null[df_null$int_estimate >= 0,]
+    df_null_pos <- df_null_pos[order(df_null_pos[[null_sort_name]], decreasing = FALSE),]
+    df_null_neg <- df_null[df_null$int_estimate < 0,]
+    df_null_neg <- df_null_neg[order(df_null_neg[[null_sort_name]], decreasing = TRUE),]
+    
     df_pos <- df_pos[order(df_pos[[signed_sort_colname]], decreasing = FALSE),]
     
-    df_plot <- rbind(df_neg, df_null, df_pos)
+    df_plot <- rbind(df_neg, df_null_neg, df_null_pos, df_pos)
     df_plot$index <- 1:nrow(df_plot)
     
     # Add dividers
@@ -369,37 +369,37 @@ contra_plot <- function(df = df, signed_sort_colname = "rldm", col_x_pos = "auto
     x_breaks <- ggplot_build(gg_plt)$layout$panel_params[[1]]$x$get_breaks()
     x_breaks <- x_breaks[!is.na(x_breaks)]
     
+    x_sigdigs = unname(sapply(xlabs, function(x) length(str_replace(x, "^[-0.]*",""))))
+    
+    
     new_xlabs_num <- mirror_rc(as.numeric(xlabs), forward = FALSE)
-    new_xlabs <- as.character(new_xlabs_num)
+    new_x_sigdigs = unname(sapply(as.character(new_xlabs_num), function(x) length(str_replace(x, "^[-0.]*",""))))
+    new_xlabs = rep("",length(new_xlabs_num))
+    
+    for (n in seq_along(new_xlabs_num)) {
+      new_xlabs[n] <- sprintf(paste0("%.",x_sigdigs[n]+ as.numeric(x_breaks<0)[n],"g"), new_xlabs_num[n])
+    }
    
     gg_plt <- gg_plt + scale_x_continuous(labels = new_xlabs, breaks = x_breaks)
     gg_plt
   }
  
- 
-  
-  # least_colname= c("rldm",'"Ls%"'), most_colname = c("rmdm",'"Ms%"'),
-  
+  # List of columns to remove from dataframe
   removed_cols <- 
     c("int_estimate", "int_lower", "int_upper", "tf_lower", "color","index",
       "tf_upper", "tf_estimate", "study_id", least_colname[1], most_colname[1])
   
-  # Data frame of metadata for contra_plot
+  # Initialize metadata dataframe for table of metadata
   meta_list <-
     c(least_colname[1], most_colname[1],
       colnames(df_plot)[!is.element(colnames(df_plot), removed_cols)])
-  
-
   df_meta <- df_plot[,meta_list]
-
   pretty_colnames <-c(least_colname[2], most_colname[2], 
                       tools::toTitleCase(meta_list[3:length(meta_list)]))
-  
-  
+  # Pretty print numbers
   df_meta[[least_colname[1]]] <-pretty_numbers(df_plot[[least_colname[1]]], relative = relative)
   df_meta[[most_colname[1]]] <-pretty_numbers(df_plot[[most_colname[1]]], relative = relative)
 
-  
   # Get max Character
   df_meta[nrow(df_plot) + 1,] <- rep(NA, ncol(df_meta))
   df_meta$index[nrow(df_meta)] <- max(df_plot$index, na.rm = TRUE)+1
@@ -425,10 +425,8 @@ contra_plot <- function(df = df, signed_sort_colname = "rldm", col_x_pos = "auto
     col_x_pos[length(col_x_pos)] = 1 #1.04
     col_x_pos[1]= 0  #-0.05
     col_x_pos[length(col_x_pos)-1] = col_x_pos[length(col_x_pos)-1] + 0.02
-    
   }
 
-  
   df_meta$index <- c(df_plot$index, max(df_plot$index)+1)
   df_meta$color <- c(df_plot$color, "white")
   df_meta$dummy_x = seq(0.02, 0.98, length.out = nrow(df_meta))
@@ -474,12 +472,6 @@ contra_plot <- function(df = df, signed_sort_colname = "rldm", col_x_pos = "auto
   save_plot(paste(fig_path, '/', fig_name, sep = ""),
            gg_grid_plot, dpi = 600, base_height = ggsize[1], 
            base_width = ggsize[2])
- 
-  # Export table
-  
-  # Export table with certain columns removed
-  
-  # write_csv(file.path(proj_path, base_dir,  str_replace(fig_name,"[.].*$",".csv")))
 
 }
 

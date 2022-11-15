@@ -5,6 +5,7 @@
 library(stringr)
 
 
+
 # Convert data from relative change to mirrored relative change 
 mirror_rc <- function(x, forward = TRUE) {
   #' @description converts elements of numeric vector x from units of relative 
@@ -19,10 +20,15 @@ mirror_rc <- function(x, forward = TRUE) {
   #' 
   #' @return x modified vector with converted elements.
 
+  # Define conversion functions
+  rc_pos_to_neg <- function(x) {-( 1/(x + 1) - 1)}
+  rc_neg_to_pos <- function(x) {-(1 + 1/(x - 1) )}
+  
+  
   if (forward) {
-    x[x<0] = -( 1/(x[x<0]+1) - 1); 
+    x[x<0] = rc_pos_to_neg(x[x<0]); 
   } else if (!forward) {
-    x[x<0] = -(1+1/(x[x<0]-1));
+    x[x<0] = rc_neg_to_pos(x[x<0]);
   } else {
     stop(sprintf("Argument for direction: must be boolean", direction))
   }
@@ -47,10 +53,15 @@ mirror_fc <- function(x, forward = TRUE) {
   #' 
   #' @return x modified vector with converted elements.
 
+  # Define forward and reverse conversion functions
+  fc_pos_to_neg <- function(x) { -1/x }
+  fc_neg_to_pos <- function(x) { -1/x }
+  
+
   if (forward) {
-    x[x<1] <- -1/x[x<1] 
+    x[x<1] <- fc_pos_to_neg(x[x<1])
   } else if (!forward) {
-    x[x<0] <- -1/x[x<0]
+    x[x<0] <- fc_neg_to_pos(x[x<0])
   } else {
     stop(sprintf("Argument for direction: must be boolean", direction))
   }
