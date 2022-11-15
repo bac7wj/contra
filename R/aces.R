@@ -8,6 +8,56 @@ if (!require("pacman")) {install.packages("pacman")}; library(pacman)
 p_load(docstring)
 # p_load(cubature)
 
+norm_credint_dm <-
+  function(mean_x, s_x, n_x, mean_y, s_y, n_y, conf.level = 0.95,
+           num_param_sims = 250/(1-conf.level), sharedVar = FALSE,
+           relative = FALSE, rand.seed = NA) {
+    
+    save(list = ls(all.names = TRUE), file = "temp/norm_credint_dm.RData",
+         envir = environment())
+    # load(file = "temp/norm_credint_dm.RData")
+    
+    
+    # x control group
+    # y experiment group
+    if (!is.na(rand.seed)) {set.seed(rand.seed)}
+    if(sharedVar){
+      shape <- .5*(n_x + n_y - 2)
+      scale <- .5*((n_x - 1)*s_x^2 + (n_y - 1) * s_y^2)
+      ssSims <- 1/rgamma(num_param_sims, shape = shape, rate = scale)
+      mux_sims <- rnorm(n = num_param_sims, mean = mean_x, sd = sqrt(ssSims/n_x))
+      muy_sims <- rnorm(n = num_param_sims, mean = mean_y, sd = sqrt(ssSims/n_y))
+    }else{ # different variances
+      shape1 <- .5*(n_x - 1)
+      scale1 <- .5*(n_x - 1) * s_x^2
+      shape2 <- .5*(n_y - 1)
+      scale2 <- .5*(n_y - 1) * s_y^2
+      ss1Sims <- 1/rgamma(n = num_param_sims, shape = shape1, rate = scale1)
+      ss2Sims <- 1/rgamma(n = num_param_sims, shape = shape2, rate = scale2)
+      mux_sims  <- rnorm(n = num_param_sims, mean = mean_x, sd = sqrt(ss1Sims / n_x))
+      muy_sims <- rnorm(n = num_param_sims, mean = mean_y, sd = sqrt(ss2Sims / n_y))
+    }
+    
+    if (!relative) {
+      dm <- muy_sims - mux_sims
+      estimate <- mean_y - mean_x
+    } else {
+      dm <- (muy_sims - mux_sims)/mux_sims
+      estimate <- (mean_y - mean_x)/ mean_x
+    }
+    quants <- c((1-conf.level)/2,1 - (1-conf.level)/2)
+    dm_bounds <- quantile(dm,  quants, type = 1)
+    
+    # Produce named list of output
+    out <- data.frame(int_estimate = estimate,
+                  int_lower = unname(dm_bounds[1]),
+                  int_upper = unname(dm_bounds[2]),
+                  int_lower_quant = quants[1], int_upper_quant = quants[2],
+                  int_relative = relative, int_conf.level = conf.level)
+    
+    
+    return(out)
+  }
 
 
 posterior_norm_dm <- 
@@ -32,8 +82,8 @@ posterior_norm_dm <-
     #' difference in means
     #' @examples
     #' x <- rnorm(10,10,.1); y <- rnorm(10,15,.1); mdm_credint(x,y, rand.seed = 0);
-    # save(list = ls(all.names = TRUE), file = "temp/mdm_credint.RData",envir = environment())
-    # load(file = "temp/mdm_credint.RData")
+    save(list = ls(all.names = TRUE), file = "temp/posterior_norm_dm.RData",envir = environment())
+    # load(file = "temp/posterior_norm_dm.RData")
     
     if (!is.na(rand.seed)) {set.seed(rand.seed)}
     
@@ -123,7 +173,7 @@ dm_credint_stats <- function(mean_x, var_x, n_x, mean_y, var_y, n_y, relative = 
                                relative = relative, conf.level = conf.level,
                                sharedVar = sharedVar, rand.seed = rand.seed,
                                num_param_sims = num_param_sims, return_cdf = FALSE)
-  dm_b <- unname(quantile(dm_sims,c(1-conf.level/2, conf.level/2), type = 4))
+  dm_b <- unname(quantile(dm_sims,c( (1-conf.level)/2, 1 - (1 - conf.level)/2), type = 4))
   
   df <- data.frame(int_estimate = (mean_y-mean_x)/mean_x,int_lower = dm_b[1], 
                    int_upper = dm_b[2])
