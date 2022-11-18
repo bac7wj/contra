@@ -116,10 +116,10 @@ calculate_contra_stats <- function(df) {
 
 
 
-contra_plot <- function(df, signed_sort_colname = "rldm", col_x_pos = "auto", xlabel = "Fold Mean Difference",
+contra_plot <- function(df, signed_sort_colname = "rldm", col_x_pos = "auto", xlabel = "Relative Difference in Means",
                         ggsize = c(3, 6), fig_path = getwd(), fig_name = "contra_plot.png",
                         least_colname = c("rldm",'"Ls%"'), most_colname = c("rmdm",'"Ms%"'),
-                        estimate_label = "est", plot_title = "Measurement", tf_xlims = NULL,
+                        prune_colnames = NULL, estimate_label = "est", plot_title = "Measurement", tf_xlims = NULL,
                         relative = FALSE, estimate_colname = "estimate", rel_plot_widths = c(0.5,0.5),
                         null_sort_name = "rmdm", cum_col_x_pos_adj = rep(0,ncol(df)-3),
                         pretty_cols = c(), threshold = NULL, mirror_x_axis = FALSE) {
@@ -255,6 +255,15 @@ contra_plot <- function(df, signed_sort_colname = "rldm", col_x_pos = "auto", xl
   df_meta[[least_colname[1]]] <-pretty_numbers(df_plot[[least_colname[1]]], relative = relative)
   df_meta[[most_colname[1]]] <-pretty_numbers(df_plot[[most_colname[1]]], relative = relative)
 
+  
+  # Prune any requested columns
+  if (!is.null(prune_colnames)) {
+    df_meta <- df_meta[ , !(names(df_meta) %in% prune_colnames)]
+    meta_list <- setdiff(meta_list, prune_colnames)
+    # df_meta <- subset(df_meta, select = -prune_colnames)
+  }
+  # browser()
+  
   # Get max Character
   df_meta[nrow(df_plot) + 1,] <- rep(NA, ncol(df_meta))
   df_meta$index[nrow(df_meta)] <- max(df_plot$index, na.rm = TRUE)+1
