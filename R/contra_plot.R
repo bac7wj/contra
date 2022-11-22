@@ -122,7 +122,8 @@ contra_plot <- function(df, signed_sort_colname = "rldm", col_x_pos = "auto", xl
                         prune_colnames = NULL, estimate_label = "est", plot_title = "Measurement", tf_xlims = NULL,
                         relative = FALSE, estimate_colname = "estimate", rel_plot_widths = c(0.5,0.5),
                         null_sort_name = "rmdm", cum_col_x_pos_adj = rep(0,ncol(df)-3),
-                        pretty_cols = c(), threshold = NULL, mirror_x_axis = FALSE) {
+                        pretty_cols = c(), mirror_x_axis = FALSE,
+                        threshold_meaningful = NULL, threshold_negligible = NULL) {
   #' @description produces a contra_plot, which visualizes the fold difference 
   #' in means between a control group and experiment group in a series of studies.
   #' 
@@ -188,13 +189,26 @@ contra_plot <- function(df, signed_sort_colname = "rldm", col_x_pos = "auto", xl
   df_plot$tf_estimate <- tf_function(df_plot$int_estimate)
   df_plot$tf_lower    <- tf_function(df_plot$int_lower)
   df_plot$tf_upper    <- tf_function(df_plot$int_upper)    
+  if (!is.null(threshold_meaningful)) {threshold_meaningful = tf_function(threshold_meaningful)}
+  
   
   # Add alternating color boxes for readability
   df_plot$color <- rep(c("white", "gray95"), nrow(df_plot))[1:nrow(df_plot)]
 
   gg_plt <- ggplot(df_plot, aes(x = tf_estimate, y = index, xmin = tf_lower, xmax = tf_upper)) +
-    geom_rect(aes(xmin = -Inf, xmax = Inf, ymin = index-0.5, ymax = index+0.5, fill = color)) +
-    annotate("segment", x = 0, y = 0, xend = 0, yend = max(df_plot$index)+0.5) +
+    geom_rect(aes(xmin = -Inf, xmax = Inf, ymin = index-0.5, ymax = index+0.5, fill = color))
+    if (!is.null(threshold_meaningful)) {
+      gg_plt <- gg_plt + 
+        annotate("segment", x = threshold_meaningful, y = 0, xend = threshold_meaningful,
+                 yend = max(df_plot$index)+0.5, color = "darkgoldenrod1")
+    }
+  if (!is.null(threshold_negligible)) {
+    gg_plt <- gg_plt +  
+      annotate("rect", xmin = -threshold_negligible, xmax = threshold_negligible,
+                ymin = 0, ymax =  max(df_plot$index)+0.5, fill = "black", alpha = 0.1)
+  }
+    
+  gg_plt <- gg_plt+ annotate("segment", x = 0, y = 0, xend = 0, yend = max(df_plot$index)+0.5) +
     geom_pointrange(shape = 22, fill = "black", size = .5, fatten = .5) +
     annotation_custom(grid::textGrob(plot_title, gp = gpar(col = "black", fontsize = 8)),
                       xmin = -Inf, xmax = Inf,
@@ -209,10 +223,7 @@ contra_plot <- function(df, signed_sort_colname = "rldm", col_x_pos = "auto", xl
           axis.text.x = element_text(size = 7),
           axis.text.y = element_text(size = 7),
           plot.margin = unit(c(0,0, 0, 0), "pt"))
-  if (!is.null(threshold)) {
-    gg_plt <- annotate("segment", x = threshold, y = 0, xend = threshold, 
-                       yend = max(df_plot$index)+0.5, color = "darkgoldenrod1")
-  }
+ 
   gg_plt
   
   # If x-axis mirrored chosen, switch axis labels back to pre transform values
@@ -223,14 +234,11 @@ contra_plot <- function(df, signed_sort_colname = "rldm", col_x_pos = "auto", xl
 
     x_breaks <- ggplot_build(gg_plt)$layout$panel_params[[1]]$x$get_breaks()
     x_breaks <- x_breaks[!is.na(x_breaks)]
-    
     x_sigdigs = unname(sapply(xlabs, function(x) length(str_replace(x, "^[-0.]*",""))))
-    
-    
+
     new_xlabs_num <- mirror_rc(as.numeric(xlabs), forward = FALSE)
     new_x_sigdigs = unname(sapply(as.character(new_xlabs_num), function(x) length(str_replace(x, "^[-0.]*",""))))
     new_xlabs = rep("",length(new_xlabs_num))
-    
     for (n in seq_along(new_xlabs_num)) {
       new_xlabs[n] <- sprintf(paste0("%.",x_sigdigs[n]+ as.numeric(x_breaks<0)[n],"g"), new_xlabs_num[n])
     }
@@ -262,7 +270,6 @@ contra_plot <- function(df, signed_sort_colname = "rldm", col_x_pos = "auto", xl
     meta_list <- setdiff(meta_list, prune_colnames)
     # df_meta <- subset(df_meta, select = -prune_colnames)
   }
-  # browser()
   
   # Get max Character
   df_meta[nrow(df_plot) + 1,] <- rep(NA, ncol(df_meta))
