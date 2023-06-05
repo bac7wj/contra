@@ -6,11 +6,11 @@ The official repository for contra-analysis, a holistic method of analysis data 
 4. Statistical hypothesis test performed within a single study to determine if the results have evidence of meaningful or negligible effect size.
 <br>
 
-This code used to generate all results and figures from the follow papers:
-1. Contra-Analysis: Prioritizing Meaningful Effect Size in Scientific Research (https://arxiv.org/abs/2210.04867).
-2. Contra-Analysis for Determining Negligible Effect Size in Scientific Research (https://arxiv.org/abs/2303.09428).
-3. The Least Difference in Means: A Statistic for Effect Size Strength and Practical Significance (https://arxiv.org/abs/2205.12958).
-4. The Most Difference in Means: A Statistic for the Strength of Null and Near-Zero Results (https://arxiv.org/abs/2201.01239).
+This code used to generate all results and figures from the follow papers:<br>
+[1] **Contra-Analysis: Prioritizing Meaningful Effect Size in Scientific Research** (https://arxiv.org/abs/2210.04867).<br>
+[2] **Contra-Analysis for Determining Negligible Effect Size in Scientific Research** (https://arxiv.org/abs/2303.09428).<br>
+[3] **The Least Difference in Means: A Statistic for Effect Size Strength and Practical Significance** (https://arxiv.org/abs/2205.12958).<br>
+[4] **The Most Difference in Means: A Statistic for the Strength of Null and Near-Zero Results** (https://arxiv.org/abs/2201.01239).<br>
 <br>
 
 This repository contains code necessary to compute the following statistics 
@@ -20,7 +20,7 @@ This repository contains code necessary to compute the following statistics
 4. Relative Least difference in means (r&delta;<sub>L</sub>): calculated with ldm_credint() in R/contra.r, with relative=TRUE 
 <br>
 
-Note: run "set_wd_here.R" in base directoy first to set working directory to the base folder for the repository. All code assumes that is the location for the workign directory.
+Note: run "set_wd_here.R" in base directoy first to set working directory to the base folder for the repository. All code assumes that is the location for the working directory.
 <br>
 
 ## Folder Structure
@@ -42,49 +42,8 @@ Note: run "set_wd_here.R" in base directoy first to set working directory to the
    7. __row_stats_toolbox.R__: helper functions for parallel processing.
    
    8. __strength_risk_assessment.R__: simulation toolbox to test candidate measures in identifying experiments with higher null strength or effect strength.
-## Most difference in Means 
-2. __mdm_t/__: scripts used to generate figures for &delta;<sub>M</sub> and r&delta;<sub>M</sub> manuscript (https://arxiv.org/abs/2201.01239)
-   
-   1. __figure2_covary_with_null_strength_SF2-5__: examines how candidate statistics respond to controlled changes of null strength. A valid statistics should respond in a consistent direction to increased null strength across all null strength measures.
-   
-   2. __figure2_illustrations_null_strength_measures.R__: A series of examples to illustrate the three parameters of unscaled agreement and relative agreement. Each example compares the difference in means or relative difference in means between a hypothetical control and experiment group.
-   
-   3. __figure3_risk_assessment_summary.R__: Runs a collection of risk assessments for test how often each candidate statistic incorrectly predicts which of two results have greater null strength.
-   
-   4. __figure4-5_calculate_stats_from_sxls.R__: creates excel table of results used as applied examples in manuscript.
-   
-   5. __sfigure1_mdm_credibility_rate.R__: calculates credibility rate of mdm with Monte Carlo method
-   
-   6. __sfigure1_rmdm_credibility_rate.R__: calculates credibility rate of rmdm with Monte Carlo method.
-   
-   7. __sfigure6-7_unscaled_risk_assessment_null.r__: Risk assessment for mu_dm, sigma_dm, df_dm, alpha_dm with null with identifying results with higher null strength.
-   
-   8. __sfigure8-9_unscaled_risk_assessment_critical.r__: Risk assessment for mu_dm, sigma_dm, df_dm, alpha_dm with identifying results with higher null strength.
-   
-   9. __sfigure10-11_relative_risk_assessment_null.R__: Risk assessment for rmu_dm, rsigma_dm, df_dm, alpha_dm with identifying results with higher null strength.
-   
-   10. __sfigure12-13_risk_assessment_contest_crit.r__: Risk assessment for rmu_dm, rsigma_dm, df_dm, alpha_dm with identifying results with higher null strength.
-
-   
-   ## Least difference in Means 
-3. __ldm_t/__: scripts used to generate figures for &delta;<sub>L</sub> and r&delta;<sub>L</sub> manuscript (https://arxiv.org/abs/2205.12958)
-   
-   1. __figure2_covary_with_effect_strength_SF2-5__: examines how candidate statistics respond to controlled changes of effect strength. A valid statistics should respond in a consistent direction to increased effect strength across all effect strength measures.
-   
-   2. __figure2_illustrations_effect_strength_measures.R__: A series of examples to illustrate the three parameters of unscaled agreement and relative agreement. Each example compares the difference in means or relative difference in means between a hypothetical control and experiment group.
-   
-   3. __figure3_risk_assessment_summary.R__: Runs a collection of risk assessments for test how often each candidate statistic incorrectly predicts which of two results have greater effect strength.
-   
-   4. __figure4-5_calculate_stats_from_sxls.R__: creates excel table of results used as applied examples in manuscript.
-   
-   5. __sfigure1_mdm_credibility_rate.R__: calculates credibility rate of ldm with Monte Carlo method
-   
-   6. __sfigure1_rmdm_credibility_rate.R__: calculates credibility rate of rldm with Monte Carlo method.
-   
-   7. __sfigure6-7_unscaled_risk_assessment_null.r__: Risk assessment for mu_dm, sigma_dm, df_dm, alpha_dm with identifying results with higher effect strength.
-   
-   8. __sfigure8-9_unscaled_risk_assessment_critical.r__: Risk assessment for mu_dm, sigma_dm, df_dm, alpha_dm with identifying results with higher effect strength.
-   
-   9. __sfigure10-11_relative_risk_assessment_null.R__: Risk assessment for rmu_dm, rsigma_dm, df_dm, alpha_dm with identifying results with higher effect strength.
-   
-   10. __sfigure12-13_risk_assessment_contest_crit.r__: Risk assessment for rmu_dm, rsigma_dm, df_dm, alpha_dm with identifying results with higher effect strength.
+2. __contra_analysis_meaningful/__: scripts used to generate figures for manuscript [1].
+3. __contra_analysis_negligible/__: scripts used to generate figures for manuscript [2].
+4. __ldm_t/__: scripts used to generate figures for manuscript [3].  
+5. __mdm_t/__: scripts used to generate figures for manuscript [4]. 
+6. 
