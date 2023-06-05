@@ -31,23 +31,18 @@ Note: run "set_wd_here.R" in base directoy first to set working directory to the
   
 1. __R/__: general r code for calculating statistics, integrated risk analysis, and correlation tests
    
-   1. __contra.r__: functions to calculate most difference in means and least difference in means statistics.
-   
-   2. __candidate_stats_from_xlsx.R__: functions to import data for applied examples.
-   
-   3. __coverage_error_toolbox.R__: simulation toolbox to test coverage error of mdm and rmdm (coverage error is the complement of coverage probability used for confidence intervals, code tests how often the mdm and rmdm is wrongly less than the pop. difference in means and rel. differnece in means).
-   
-   4. __credibility_rate_toolbox.R__: simulation toolbox to test credibility of mdm and rmdm.
-   
-   5. __illustrative_plot.R__: helper functions for producing plots to illustrate null strength and effect strength measures.
-   
-   6. __parallel_utils.R__: helper functions for parallel processing.
-   
-   7. __row_stats_toolbox.R__: helper functions for parallel processing.
-   
-   8. __strength_risk_assessment.R__: simulation toolbox to test candidate measures in identifying experiments with higher null strength or effect strength.
+   1. __candidate_stats_from_xlsx.R__: functions to import data from excel files for applied examples that are used in [1-4].
+   2. __contra.r__: functions to calculate most difference in means and least difference in means statistics that are used in contra-analysis.
+   3. __contra_experimental.r__: experimental functions (in-progress) for alternative statistics for contra-analysis (frenquitist approaches etc.).
+   4. __contra_plot__: visualization used for contra-analysis. Displays interval estimates of relative effect size for a collection of braodly related experiments (measure the same output variable using different model systems and disease systems)
+   5. __coverage_error_toolbox.R__: simulation toolbox to test coverage error of mdm and rmdm (coverage error is the complement of coverage probability used for confidence intervals, code tests how often the mdm and rmdm is wrongly less than the population difference in means and rel. difference in means).
+   6. __credibility rate_toolbox.R__: simulation toolbox to test credibility of mdm and rmdm.
+   7. __illustrative_plot.R__: helper plot functions for simple figures in each manuscript that illustrates basic concepts.
+   8. __mirrored_transforms.R__: helper functions for transforms required for the contra_plot
+   9. __parallel_utils.R__: helper functions for parallel processing.
+   10. __row_stats_toolbox.R__: helper functions for parallel processing.
+   11. __strength_risk_assessment.R__: simulation toolbox to test candidate measures in identifying experiments with higher null strength or effect strength (see [3-4]).
 2. __contra_analysis_meaningful/__: scripts used to generate figures for manuscript [1].
 3. __contra_analysis_negligible/__: scripts used to generate figures for manuscript [2].
 4. __ldm_t/__: scripts used to generate figures for manuscript [3].  
 5. __mdm_t/__: scripts used to generate figures for manuscript [4]. 
-6. 
