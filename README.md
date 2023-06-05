@@ -1,6 +1,6 @@
 # Contra-Analysis 
 
-The official repository for contra-analysis, a holistic method of analysis data analysis.
+The official repository for contra-analysis, a holistic method of data analysis for controlled experiments.
 ![Contra-Analysis Flowchart](https://github.com/bac7wj/contra/blob/98b1a2adae65abd003d6a804712fd1a52bc28332/resources/contra-analysis-flowshart.PNG)
 
 This data analysis process includes:
