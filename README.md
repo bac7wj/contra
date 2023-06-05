@@ -1,15 +1,25 @@
-# Analysis of Conservative Effect Size (ACES)
-The official repository for the most difference in means (https://arxiv.org/abs/2201.01239) and least difference in means (https://arxiv.org/abs/2205.12958) statistics<p>
-This repository is under continuous development for research. <p> <p>
-This repository contains code necessary to compute the following statistics <p>
-1. Most difference in means (&delta;<sub>M</sub>): calculated with mdm_credint() in R/contra.r, with relative=FALSE
-2. Relative most difference in means (r&delta;<sub>M</sub>): calculated with mdm_credint() in R/contra.r, with relative=TRUE
-3. Least difference in means (&delta;<sub>L</sub>): calculated with ldm_credint() in R/contra.r, with relative=FALSE
-4. Relative Least difference in means (r&delta;<sub>L</sub>): calculated with ldm_credint() in R/contra.r, with relative=TRUE
-
+# Contra-Analysis 
+The official repository for contra-analysis, a holistic method of analysis data analysis that include
+1. Visualization of effect size from broadly related experiments
+2. Determination of the thresholds for meaningful and negligible effect size based on related experiments and real world considerations.
+3. Decision-making procedure to determine which experiments show evidence of meaningful or negligible effect size.
+4. Statistical hypothesis test performed within a single study to determine if the results have evidence of meaningful or negligible effect size.
+<br>
+This code used to generate all results and figures from the follow papers:<br>
+1. Contra-Analysis: Prioritizing Meaningful Effect Size in Scientific Research (https://arxiv.org/abs/2210.04867).<br>
+2. Contra-Analysis for Determining Negligible Effect Size in Scientific Research (https://arxiv.org/abs/2303.09428).<br>
+3. The Least Difference in Means: A Statistic for Effect Size Strength and Practical Significance (https://arxiv.org/abs/2205.12958).<br>
+4. The Most Difference in Means: A Statistic for the Strength of Null and Near-Zero Results (https://arxiv.org/abs/2201.01239).<br>
+<br>
+This repository contains code necessary to compute the following statistics <br>
+1. Most difference in means (&delta;<sub>M</sub>): calculated with mdm_credint() in R/contra.r, with relative=FALSE <br>
+2. Relative most difference in means (r&delta;<sub>M</sub>): calculated with mdm_credint() in R/contra.r, with relative=TRUE <br>
+3. Least difference in means (&delta;<sub>L</sub>): calculated with ldm_credint() in R/contra.r, with relative=FALSE <br>
+4. Relative Least difference in means (r&delta;<sub>L</sub>): calculated with ldm_credint() in R/contra.r, with relative=TRUE <br>
+<br>
 Note: run "set_wd_here.R" in base directoy first to set working directory to the base folder for the repository. All code assumes that is the location for the workign directory.
-
-## Folder Structure
+<br>
+## Folder Structure <br>
   
 1. __R/__: general r code for calculating statistics, integrated risk analysis, and correlation tests
    
