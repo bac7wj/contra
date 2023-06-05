@@ -1,6 +1,10 @@
 # Contra-Analysis 
-The official repository for contra-analysis, a holistic method of analysis data analysis that include
-1. Visualization of effect size from broadly related experiments
+
+The official repository for contra-analysis, a holistic method of analysis data analysis.
+![Contra-Analysis Flowchart](https://github.com/bac7wj/contra/blob/98b1a2adae65abd003d6a804712fd1a52bc28332/resources/contra-analysis-flowshart.PNG)
+
+This data analysis process includes:
+1. Visualization of effect size from broadly related experiments.
 2. Determination of the thresholds for meaningful and negligible effect size based on related experiments and real world considerations.
 3. Decision-making procedure to determine which experiments show evidence of meaningful or negligible effect size.
 4. Statistical hypothesis test performed within a single study to determine if the results have evidence of meaningful or negligible effect size.
